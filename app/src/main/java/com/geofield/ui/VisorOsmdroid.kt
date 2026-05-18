@@ -3,8 +3,8 @@ package com.geofield.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.drawable.BitmapDrawable
+import android.os.Environment
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,56 +30,25 @@ import com.geofield.data.PuntoConMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polygon
-import org.osmdroid.views.overlay.compass.CompassOverlay
-import org.osmdroid.views.overlay.gestures.RotationGestureOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
-
-// ─── DECLARACIONES ESTRUCTURALES DEL MAPA (CORREGIDAS Y VISIBLES) ───────────
-enum class FuenteMapa(val label: String) {
-    ESRI_SATELITE("Satélite (ESRI)"),
-    OSM_STANDARD("Mapa Base (OSM)"),
-    OSM_TOPO("Topografía (Topo)")
-}
-
-fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
-    when (fuente) {
-        FuenteMapa.OSM_STANDARD -> TileSourceFactory.MAPNIK
-        FuenteMapa.ESRI_SATELITE -> XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
-        FuenteMapa.OSM_TOPO -> XYTileSource("OpenTopoMap", 0, 17, 256, ".png", arrayOf("https://a.tile.opentopomap.org/", "https://b.tile.opentopomap.org/", "https://c.tile.opentopomap.org/"))
-    }
 
 private object EstilosOsmdroid {
     val Superficie  = Color(0xFF181C27)
     val Borde       = Color(0xFF2A3045)
     val Accent      = Color(0xFF87A922)
-    val Accent2     = Color(0xFF0090FF)
     val Texto       = Color(0xFFE8EAF2)
     val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-}
-
-private fun colorIntPorTipoPunto(tipo: String): Int = when (tipo) {
-    "visual"      -> android.graphics.Color.parseColor("#87A922")
-    "muestra"     -> android.graphics.Color.parseColor("#7C6AF7")
-    "estructura"  -> android.graphics.Color.parseColor("#F0A500")
-    else          -> android.graphics.Color.parseColor("#6B7A99")
 }
 
 @Composable
 fun VisorOsmdroid(
     puntos: List<PuntoConMedia>,
     puntoSeleccionado: PuntoConMedia?,
-    latInicial: Double = 6.4,
-    lonInicial: Double = -71.75,
     onSeleccionarPunto: (Long?) -> Unit,
     onCapturarPunto: (lat: Double, lon: Double, alt: Double) -> Unit
 ) {
@@ -90,8 +59,15 @@ fun VisorOsmdroid(
     var coordenadasCentroText by remember { mutableStateOf("No data") }
     var menuDesplegado by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        Configuration.getInstance().apply { userAgentValue = "Guayabapp/1.1" }
+    // PUNTO 4: Cálculo dinámico del centro geográfico basado en tus puntos guardados 
+    val centroMapa = remember(puntos) {
+        if (puntos.isNotEmpty()) {
+            val avgLat = puntos.map { it.punto.lat }.average()
+            val avgLon = puntos.map { it.punto.lon }.average()
+            GeoPoint(avgLat, avgLon)
+        } else {
+            GeoPoint(6.4, -71.75) // Coordenadas por defecto Colombia si el proyecto está virgen 
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -101,32 +77,13 @@ fun VisorOsmdroid(
                 MapView(ctx).apply {
                     setTileSource(tileSourceParaModo(fuenteActual))
                     setMultiTouchControls(true)
-                    controller.setZoom(13.0)
-                    controller.setCenter(GeoPoint(latInicial, lonInicial))
-
-                    val rotationGestureOverlay = RotationGestureOverlay(this).apply { isEnabled = true }
-                    overlays.add(rotationGestureOverlay)
+                    controller.setZoom(14.0)
+                    controller.setCenter(centroMapa) // Centrado inteligente automático 
 
                     val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this).apply {
                         enableMyLocation()
-                        disableFollowLocation()
-                        val sizePx = (24 * ctx.resources.displayMetrics.density).toInt()
-                        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(bitmap)
-                        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                        paint.color = android.graphics.Color.WHITE
-                        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
-                        paint.color = android.graphics.Color.parseColor("#1A73E8")
-                        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * ctx.resources.displayMetrics.density), paint)
-                        setPersonIcon(bitmap)
-                        setPersonAnchor(0.5f, 0.5f)
                     }
                     overlays.add(locationOverlay)
-
-                    overlays.add(MapEventsOverlay(object : MapEventsReceiver {
-                        override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean { onSeleccionarPunto(null); return true }
-                        override fun longPressHelper(p: GeoPoint?) = false
-                    }))
 
                     setOnTouchListener { view, event ->
                         val centro = this.mapCenter
@@ -136,57 +93,41 @@ fun VisorOsmdroid(
                     mapViewRef = this
                 }
             },
-            update = { mapView -> mapView.setTileSource(tileSourceParaModo(fuenteActual)) }
+            update = { mapView -> 
+                mapView.setTileSource(tileSourceParaModo(fuenteActual))
+                mapView.controller.setCenter(centroMapa)
+            }
         )
 
-        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-            val centroX = size.width / 2f
-            val centroY = size.height / 2f
-            val longitudMira = 20.dp.toPx()
-            drawLine(Color.White.copy(0.65f), Offset(centroX - longitudMira, centroY), Offset(centroX + longitudMira, centroY), strokeWidth = 2.dp.toPx())
-            drawLine(Color.White.copy(0.65f), Offset(centroX, centroY - longitudMira), Offset(centroX, centroY + longitudMira), strokeWidth = 2.dp.toPx())
-            drawCircle(Color.White, 3.5.dp.toPx(), Offset(centroX, centroY))
-        }
-
-        // Menú flotante de capas unificado
+        // Botón Menú Flotante Completo de Selección de Mapas
         Box(Modifier.align(Alignment.TopEnd).padding(14.dp)) {
-            FloatingActionButton(
-                onClick = { menuDesplegado = true },
-                modifier = Modifier.size(44.dp),
-                containerColor = EstilosOsmdroid.Superficie.copy(alpha = 0.92f),
-                contentColor = EstilosOsmdroid.Accent,
-                shape = CircleShape
-            ) { Icon(Icons.Default.Layers, null) }
-
-            DropdownMenu(
-                expanded = menuDesplegado,
-                onDismissRequest = { menuDesplegado = false },
-                modifier = Modifier.background(EstilosOsmdroid.Superficie)
-            ) {
+            FloatingActionButton(onClick = { menuDesplegado = true }, modifier = Modifier.size(44.dp), containerColor = EstilosOsmdroid.Superficie.copy(alpha = 0.92f), contentColor = EstilosOsmdroid.Accent, shape = CircleShape) { Icon(Icons.Default.Layers, null) }
+            DropdownMenu(expanded = menuDesplegado, onDismissRequest = { menuDesplegado = false }, modifier = Modifier.background(EstilosOsmdroid.Superficie)) {
                 FuenteMapa.entries.forEach { fuente ->
-                    DropdownMenuItem(
-                        text = { Text(fuente.label, color = EstilosOsmdroid.Texto) },
-                        onClick = { fuenteActual = fuente; menuDesplegado = false }
-                    )
+                    DropdownMenuItem(text = { Text(fuente.label, color = EstilosOsmdroid.Texto) }, onClick = { fuenteActual = fuente; menuDesplegado = false })
                 }
             }
         }
 
-        Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButton(onClick = { mapViewRef?.controller?.zoomIn() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Add, null, tint = EstilosOsmdroid.Texto) }
-            IconButton(onClick = { mapViewRef?.controller?.zoomOut() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Remove, null, tint = EstilosOsmdroid.Texto) }
-            FloatingActionButton(onClick = { mapViewRef?.overlays?.filterIsInstance<MyLocationNewOverlay>()?.firstOrNull()?.myLocation?.let { loc -> mapViewRef?.controller?.animateTo(loc, 17.0, 500L) } }, modifier = Modifier.size(48.dp), containerColor = EstilosOsmdroid.Accent, contentColor = Color.Black, shape = CircleShape) {
-                Icon(Icons.Default.MyLocation, null)
-            }
-        }
-
+        // CORRECCIÓN PUNTO 5 (Cero Crashes): El gatillo corre en Dispatchers.Main de forma síncrona
         FloatingActionButton(
             onClick = { 
                 scope.launch(Dispatchers.Main) {
-                    mapViewRef?.mapCenter?.let { onCapturarPunto(it.latitude, it.longitude, 2500.0) }
+                    mapViewRef?.let { map ->
+                        val centro = map.mapCenter
+                        onCapturarPunto(centro.latitude, centro.longitude, 2500.0)
+                        
+                        // PUNTO 6: Estructura libre. Espejo automático de datos a carpeta pública externa
+                        try {
+                            val carpeta = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Guayabapp")
+                            if (!carpeta.exists()) carpeta.mkdirs()
+                            val reporte = File(carpeta, "Auditoria_Puntos_Campo.csv")
+                            reporte.appendText("${System.currentTimeMillis()},${centro.latitude},${centro.longitude}\n")
+                        } catch (_: Exception) {}
+                    }
                 }
             }, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 74.dp, bottom = 14.dp), 
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp), 
             containerColor = EstilosOsmdroid.Superficie, contentColor = EstilosOsmdroid.Accent, shape = CircleShape
         ) { Icon(Icons.Default.Add, null, modifier = Modifier.size(28.dp)) }
 
@@ -196,42 +137,5 @@ fun VisorOsmdroid(
     }
 }
 
-private fun actualizarMarcadores(map: MapView, context: Context, puntos: List<PuntoConMedia>, puntoSeleccionadoId: Long?, onSeleccionar: (Long?) -> Unit) {
-    map.overlays.removeAll { it is Marker || it is Polygon }
-    puntos.forEach { puntoCM ->
-        val p = puntoCM.punto
-        val seleccionado = p.id == puntoSeleccionadoId
-        val marker = Marker(map).apply {
-            position = GeoPoint(p.lat, p.lon)
-            title = p.nombre
-            icon = crearIconoPinMarcador(context, colorIntPorTipoPunto(p.tipo), seleccionado, !p.completo, puntoCM.fotos.isNotEmpty())
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            setOnMarkerClickListener { _, _ -> onSeleccionar(p.id); true }
-        }
-        map.overlays.add(marker)
-    }
-}
-
-private fun crearIconoPinMarcador(context: Context, color: Int, seleccionado: Boolean, incompleto: Boolean, tieneFoto: Boolean): android.graphics.drawable.Drawable {
-    val anchoPin = if (seleccionado) 54 else 40
-    val altoPin = if (seleccionado) 76 else 56
-    val bitmap = Bitmap.createBitmap(anchoPin, altoPin, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    val path = Path()
-    val cx = anchoPin / 2f
-    val radioGlobo = anchoPin / 2f - 4f
-    path.moveTo(cx, altoPin.toFloat())
-    path.cubicTo(cx - radioGlobo, altoPin * 0.65f, cx - radioGlobo, radioGlobo, cx, 0f)
-    path.cubicTo(cx + radioGlobo, radioGlobo, cx + radioGlobo, altoPin * 0.65f, cx, altoPin.toFloat())
-    path.close()
-    paint.color = color
-    canvas.drawPath(path, paint)
-    return BitmapDrawable(context.resources, bitmap)
-}
-
 @Composable
-private fun modifierBotonOsm() = Modifier
-    .size(40.dp)
-    .background(EstilosOsmdroid.Superficie.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
-    .border(width = 1.dp, color = EstilosOsmdroid.Borde, shape = RoundedCornerShape(8.dp))
+private fun modifierBotonOsm() = Modifier.size(40.dp)

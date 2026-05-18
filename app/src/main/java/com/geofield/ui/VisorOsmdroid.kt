@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Path
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,13 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.foundation.BorderStroke // CORRECCIÓN IMPORTACIÓN FALTA
-import androidx.compose.ui.text.TextStyle 
-import androidx.compose.ui.text.font.FontFamily 
-import androidx.compose.ui.text.font.FontWeight 
 import com.geofield.data.PuntoConMedia
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -41,30 +41,18 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 
-enum class FuenteMapa(val label: String) {
-    OSM_STANDARD("Calles OSM"),
-    ESRI_SATELITE("Satélite ESRI"),
-    OSM_TOPO("Topografía"),
-    OFFLINE("Offline (.mbtiles)")
+// Encapsulado en contenedor local único para evitar colisiones lógicas globales
+private object EstilosOsmdroid {
+    val Superficie  = Color(0xFF181C27)
+    val Borde       = Color(0xFF2A3045)
+    val Accent      = Color(0xFF87A922)
+    val Accent2     = Color(0xFF0090FF)
+    val Muted       = Color(0xFF6B7A99)
+    val Texto       = Color(0xFFE8EAF2)
+    val Texto2      = Color(0xFF9AA3BF)
+
+    val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
 }
-
-private fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
-    when (fuente) {
-        FuenteMapa.OSM_STANDARD -> TileSourceFactory.MAPNIK
-        FuenteMapa.ESRI_SATELITE -> XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
-        FuenteMapa.OSM_TOPO -> XYTileSource("OpenTopoMap", 0, 17, 256, ".png", arrayOf("https://a.tile.opentopomap.org/", "https://b.tile.opentopomap.org/", "https://c.tile.opentopomap.org/"))
-        FuenteMapa.OFFLINE -> TileSourceFactory.MAPNIK
-    }
-
-private val ColorSuperficie  = Color(0xFF181C27)
-private val ColorBorde       = Color(0xFF2A3045)
-private val ColorAccent      = Color(0xFF87A922)
-private val ColorAccent2     = Color(0xFF0090FF)
-private val ColorMuted       = Color(0xFF6B7A99)
-private val ColorTexto       = Color(0xFFE8EAF2)
-private val ColorTexto2      = Color(0xFF9AA3BF)
-
-private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
 
 private fun colorIntPorTipoPunto(tipo: String): Int = when (tipo) {
     "visual"      -> android.graphics.Color.parseColor("#87A922")
@@ -172,26 +160,26 @@ fun VisorOsmdroid(
             FuenteMapa.entries.forEach { fuente ->
                 if (fuente == FuenteMapa.OFFLINE && rutaMbtilesOffline == null) return@forEach
                 val activo = fuenteActual == fuente
-                Surface(onClick = { fuenteActual = fuente }, color = if (activo) ColorAccent2 else ColorSuperficie.copy(alpha = 0.90f), shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, if (activo) ColorAccent2 else ColorBorde)) {
-                    Text(text = fuente.label, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), style = LocalLabelMedium, color = if (activo) Color.White else ColorTexto2)
+                Surface(onClick = { fuenteActual = fuente }, color = if (activo) EstilosOsmdroid.Accent2 else EstilosOsmdroid.Superficie.copy(alpha = 0.90f), shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, if (activo) EstilosOsmdroid.Accent2 else EstilosOsmdroid.Borde)) {
+                    Text(text = fuente.label, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), style = EstilosOsmdroid.LabelMedium, color = if (activo) Color.White else EstilosOsmdroid.Texto2)
                 }
             }
         }
 
         Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            IconButton(onClick = { mapViewRef?.controller?.zoomIn() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Add, null, tint = ColorTexto) }
-            IconButton(onClick = { mapViewRef?.controller?.zoomOut() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Remove, null, tint = ColorTexto) }
-            FloatingActionButton(onClick = { mapViewRef?.overlays?.filterIsInstance<MyLocationNewOverlay>()?.firstOrNull()?.myLocation?.let { loc -> mapViewRef?.controller?.animateTo(loc, 17.0, 500L) } }, modifier = Modifier.size(48.dp), containerColor = ColorAccent, contentColor = Color.Black, shape = CircleShape) {
+            IconButton(onClick = { mapViewRef?.controller?.zoomIn() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Add, null, tint = EstilosOsmdroid.Texto) }
+            IconButton(onClick = { mapViewRef?.controller?.zoomOut() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Remove, null, tint = EstilosOsmdroid.Texto) }
+            FloatingActionButton(onClick = { mapViewRef?.overlays?.filterIsInstance<MyLocationNewOverlay>()?.firstOrNull()?.myLocation?.let { loc -> mapViewRef?.controller?.animateTo(loc, 17.0, 500L) } }, modifier = Modifier.size(48.dp), containerColor = EstilosOsmdroid.Accent, contentColor = Color.Black, shape = CircleShape) {
                 Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(22.dp))
             }
         }
 
-        FloatingActionButton(onClick = { mapViewRef?.mapCenter?.let { onCapturarPunto(it.latitude, it.longitude, 2500.0) } }, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 74.dp, bottom = 14.dp), containerColor = ColorSuperficie, contentColor = ColorAccent, shape = CircleShape) {
+        FloatingActionButton(onClick = { mapViewRef?.mapCenter?.let { onCapturarPunto(it.latitude, it.longitude, 2500.0) } }, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 74.dp, bottom = 14.dp), containerColor = EstilosOsmdroid.Superficie, contentColor = EstilosOsmdroid.Accent, shape = CircleShape) {
             Icon(Icons.Default.Add, null, modifier = Modifier.size(28.dp))
         }
 
         Surface(Modifier.align(Alignment.BottomStart).padding(12.dp), color = Color(0xCC0F1117), shape = RoundedCornerShape(4.dp)) {
-            Text(text = coordenadasCentroText, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = LocalLabelMedium, color = ColorAccent)
+            Text(text = coordenadasCentroText, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = EstilosOsmdroid.LabelMedium, color = EstilosOsmdroid.Accent)
         }
     }
 }
@@ -272,5 +260,5 @@ private fun cargarTilesOffline(mapView: MapView, rutaMbtiles: String) {}
 @Composable
 private fun modifierBotonOsm() = Modifier
     .size(40.dp)
-    .background(ColorSuperficie.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
-    .border(1.dp, ColorBorde, RoundedCornerShape(8.dp))
+    .background(EstilosOsmdroid.Superficie.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
+    .border(1.dp, EstilosOsmdroid.Borde, RoundedCornerShape(8.dp))

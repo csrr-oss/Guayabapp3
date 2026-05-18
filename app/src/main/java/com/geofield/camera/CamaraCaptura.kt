@@ -36,21 +36,22 @@ import androidx.lifecycle.LifecycleOwner
 import com.geofield.location.EstadoGps
 import com.geofield.location.ExifGpsWriter
 import com.geofield.location.LecturaGps
+import com.geofield.theme.GuayabappTypography // Importamos la nueva tipografía Nunito unificada
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ─── PALETA ───────────────────────────────────────────────────────────────────
-private val ColorFondo      = Color(0xFF0F1117)
-private val ColorSuperficie = Color(0xFF181C27)
-private val ColorBorde      = Color(0xFF2A3045)
-private val ColorAccent     = Color(0xFF00D084)
-private val ColorAccent2    = Color(0xFF0090FF)
-private val ColorMuted      = Color(0xFF6B7A99)
-private val ColorTexto      = Color(0xFFE8EAF2)
-private val ColorWarn       = Color(0xFFF0A500)
-private val ColorRed        = Color(0xFFFF4757)
+// ─── PALETA GUAYABAPP IDENTIDAD VISUAL ANTRACITA Y FRUTAL ────────────────────
+private val ColorFondo      = Color(0xFF0F1117) // Fondo principal
+private val ColorSuperficie = Color(0xFF181C27) // Superficie
+private val ColorBorde      = Color(0xFF2A3045) // Bordes
+private val ColorAccent     = Color(0xFF87A922) // Verde Guayaba Maduro (Accent principal)
+private val ColorAccent2    = Color(0xFF0090FF) // Modo OSM (Azul)
+private val ColorMuted      = Color(0xFF6B7A99) // Gris mitigado
+private val ColorTexto      = Color(0xFFE8EAF2) // Blanco texto principal
+private val ColorWarn       = Color(0xFFF0A500) // Ámbar advertencia
+private val ColorRed        = Color(0xFFD80032) // Rubí pulpa de guayaba (Alertas/Grabación)
 
 enum class ModoCaptura { FOTO, VIDEO }
 
@@ -60,6 +61,10 @@ data class ResultadoCaptura(
     val lectura: LecturaGps?,
     val duracionSeg: Int = 0
 )
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PANTALLA PRINCIPAL DE CÁMARA
+// ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
 fun CamaraScreen(
@@ -79,14 +84,12 @@ fun CamaraScreen(
     var ultimaFoto    by remember { mutableStateOf<String?>(null) }
     var procesando    by remember { mutableStateOf(false) }
 
-    // Usamos referencias estables para evitar re-vincular CameraX destructivamente
     val imageCaptureRef = remember { mutableStateOf<ImageCapture?>(null) }
     val videoCaptureRef = remember { mutableStateOf<VideoCapture<Recorder>?>(null) }
     var grabacionActiva by remember { mutableStateOf<Recording?>(null) }
 
     val lecturaGps = (estadoGps as? EstadoGps.Activo)?.lectura
 
-    // Cronómetro de video optimizado
     LaunchedEffect(grabando) {
         if (grabando) {
             segundosVideo = 0
@@ -101,7 +104,7 @@ fun CamaraScreen(
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
 
-        // CORRECCIÓN: CamaraPreview ahora es estable y no recrea el provider continuamente
+        // Vista previa de cámara optimizada sin rebindeo infinito
         CamaraPreview(
             modo = modo,
             flashActivo = flashActivo,
@@ -111,7 +114,7 @@ fun CamaraScreen(
             onVideoCaptureReady = { videoCaptureRef.value = it }
         )
 
-        // Overlay Superior
+        // ── OVERLAY SUPERIOR: Barra de estado e Identidad ────────────────────
         Column(
             Modifier
                 .fillMaxWidth()
@@ -129,6 +132,14 @@ fun CamaraScreen(
                     Icon(Icons.Default.Close, contentDescription = "Cerrar",
                         tint = ColorTexto, modifier = Modifier.size(22.dp))
                 }
+
+                // Nombre Oficial de la App inyectado con Nunito
+                Text(
+                    text = "Guayabapp",
+                    style = GuayabappTypography.titleMedium,
+                    color = ColorTexto,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
 
                 BadgeGpsCamara(estadoGps = estadoGps, modifier = Modifier.weight(1f))
 
@@ -165,14 +176,14 @@ fun CamaraScreen(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         formatearTiempo(segundosVideo),
-                        style = TextStyle(fontFamily = FontFamily.Monospace,
-                            fontSize = 16.sp, color = ColorTexto, fontWeight = FontWeight.Medium)
+                        style = GuayabappTypography.labelMedium.copy(fontSize = 16.sp),
+                        color = ColorTexto
                     )
                 }
             }
         }
 
-        // Overlay Inferior
+        // ── OVERLAY INFERIOR: Modos, Disparador y Coordenadas WGS84 ───────────
         Column(
             Modifier
                 .fillMaxWidth()
@@ -243,21 +254,33 @@ fun CamaraScreen(
                     }
                 )
 
-                // Coordenadas GPS
+                // CORRECCIÓN: Coordenadas WGS84 legibles con espacio reglamentario y tipografía aumentada
                 Column(
                     horizontalAlignment = Alignment.End,
-                    modifier = Modifier.width(90.dp)
+                    modifier = Modifier.width(110.dp)
                 ) {
                     if (lecturaGps != null) {
-                        Text("N%.4f°".format(lecturaGps.lat),
-                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = ColorAccent))
-                        Text("W%.4f°".format(Math.abs(lecturaGps.lon)),
-                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = ColorAccent))
-                        Text(lecturaGps.precisionTexto,
-                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = ColorMuted))
+                        Text(
+                            text = "N %.4f°".format(lecturaGps.lat), 
+                            style = GuayabappTypography.labelMedium, 
+                            color = ColorAccent
+                        )
+                        Text(
+                            text = "W %.4f°".format(Math.abs(lecturaGps.lon)), 
+                            style = GuayabappTypography.labelMedium, 
+                            color = ColorAccent
+                        )
+                        Text(
+                            text = lecturaGps.precisionTexto, 
+                            style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp), 
+                            color = ColorMuted
+                        )
                     } else {
-                        Text("Sin GPS",
-                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = ColorWarn))
+                        Text(
+                            text = "Sin GPS", 
+                            style = GuayabappTypography.labelMedium, 
+                            color = ColorWarn
+                        )
                     }
                 }
             }
@@ -274,7 +297,8 @@ fun CamaraScreen(
     }
 }
 
-// ─── OPTIMIZACIÓN ABSOLUTA EN EL MANEJO DE CAMERAX ────────────────────────────
+// ─── COMPOSABLE CÁMARA PREVIEW (CONTROL DE INSTANCIAS ESTABLES) ───────────────
+
 @Composable
 private fun CamaraPreview(
     modo: ModoCaptura,
@@ -295,7 +319,6 @@ private fun CamaraPreview(
         }
     }
 
-    // Instanciamos los casos de uso una sola vez por cada cambio estructural de lente
     val preview = remember { Preview.Builder().build() }
     val imageCapture = remember {
         ImageCapture.Builder()
@@ -309,12 +332,10 @@ private fun CamaraPreview(
         VideoCapture.withOutput(recorder)
     }
 
-    // Actualizamos propiedades dinámicas (como el flash) sin reconstruir la vista
     LaunchedEffect(flashActivo) {
         imageCapture.flashMode = if (flashActivo) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
     }
 
-    // Re-bindear CameraX solo cuando cambia la orientación de la lente (Frontal/Trasera)
     LaunchedEffect(camaraFrontal) {
         val cameraProvider = ProcessCameraProvider.getInstance(context).await()
         val selector = if (camaraFrontal) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -330,7 +351,6 @@ private fun CamaraPreview(
             )
             preview.setSurfaceProvider(previewView.surfaceProvider)
             
-            // Enviamos las instancias listas al Scope superior
             onImageCaptureReady(imageCapture)
             onVideoCaptureReady(videoCapture)
         } catch (e: Exception) {
@@ -344,7 +364,7 @@ private fun CamaraPreview(
     )
 }
 
-// Extensión Helper para convertir el Future de CameraX en Corrutina suspendida limpia
+// Extension para transformar ListenableFuture a suspensión limpia de Corrutinas
 private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.await(): T {
     return suspendCancellableCoroutine { continuation ->
         addListener({
@@ -353,13 +373,54 @@ private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.aw
             } catch (e: Exception) {
                 continuation.resumeWith(Result.failure(e))
             }
-        }, ContextCompat.getMainExecutor(continuation.context[Job] as? Context ?: ContextCompat.getMainExecutor(previewViewContext(continuation)))) 
-        // fallback robusto al executor principal
+        }, ContextCompat.getMainExecutor(contextFromContinuation(continuation)))
     }
 }
-private fun previewViewContext(cont: CancellableContinuation<*>): Context {
-    return (cont.context[Job] as? Context) ?: throw IllegalStateException("Context Missing")
+
+private fun contextFromContinuation(cont: CancellableContinuation<*>): Context {
+    return (cont.context[Job] as? Context) ?: throw IllegalStateException("Ciclo de ejecución de contexto faltante.")
 }
 
-// El resto de funciones auxiliares (tomarFoto, iniciarVideo, UI composables) 
-// se mantienen igual ya que su lógica procedural está bien estructurada.
+// ─── PROCEDIMIENTO PROCEDURAL DE CAPTURA DE FOTO ──────────────────────────────
+
+private suspend fun tomarFoto(
+    context: Context,
+    imageCapture: ImageCapture?,
+    lecturaGps: LecturaGps?
+): String? = withContext(Dispatchers.IO) {
+    if (imageCapture == null) return@withContext null
+
+    val archivo = crearArchivoMedia(context, "FOTO", ".jpg")
+
+    suspendCancellableCoroutine { cont ->
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(archivo).build()
+
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    lecturaGps?.let {
+                        ExifGpsWriter.escribirEnFoto(archivo.absolutePath, it)
+                    }
+                    cont.resume(archivo.absolutePath) {}
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    cont.resume(null) {}
+                }
+            }
+        )
+    }
+}
+
+// ─── PROCEDIMIENTO PROCEDURAL DE GRABACIÓN DE VIDEO ───────────────────────────
+
+private suspend fun iniciarVideo(
+    context: Context,
+    videoCapture: VideoCapture<Recorder>?,
+    onFinalizado: (ruta: String, duracionSeg: Int) -> Unit
+): Pair<Recording?, String?> {
+    if (videoCapture == null) return Pair(null, null)
+
+    val archivo = crearArchivo

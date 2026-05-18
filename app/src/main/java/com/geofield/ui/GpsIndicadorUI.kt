@@ -14,12 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geofield.location.EstadoGps
 import com.geofield.location.LecturaGps
-import com.geofield.theme.GuayabappTypography // CORRECCIÓN: Ruta de importación unificada
 
 // ─── PALETA GUAYABAPP ────────────────────────────────────────────────────────
 private val ColorFondo       = Color(0xFF0F1117)
@@ -33,6 +34,12 @@ private val ColorMalo        = Color(0xFFD80032) // Rubí Pulpa
 private val ColorMuted       = Color(0xFF6B7A99) 
 private val ColorTexto       = Color(0xFFE8EAF2)
 private val ColorTexto2      = Color(0xFF9AA3BF)
+
+// Estilos tipográficos locales para evitar errores de importación cruzada
+private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 0.5.sp)
+private val LocalTitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+private val LocalTitleLarge  = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 22.sp)
+private val LocalBodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 15.sp)
 
 private fun colorPorPrecision(precision: Float) = when {
     precision <= 3f  -> ColorAccent
@@ -70,7 +77,7 @@ fun GpsBadgeTopBar(estado: EstadoGps) {
         ) {
             val pulseAlpha = if (estado is EstadoGps.Buscando) alpha else 1f
             Box(Modifier.size(7.dp).background(dotColor.copy(alpha = pulseAlpha), CircleShape))
-            Text(text = texto, style = GuayabappTypography.labelMedium, color = dotColor)
+            Text(text = texto, style = LocalLabelMedium, color = dotColor)
         }
     }
 }
@@ -88,7 +95,7 @@ fun PanelGpsDetalle(estado: EstadoGps, onCerrar: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.GpsFixed, contentDescription = null, tint = ColorAccent, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(text = "Estado GPS", style = GuayabappTypography.titleMedium.copy(fontSize = 14.sp), color = ColorTexto)
+                Text(text = "Estado GPS", style = LocalTitleMedium, color = ColorTexto)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onCerrar, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.Close, contentDescription = null, tint = ColorMuted, modifier = Modifier.size(14.dp))
@@ -122,13 +129,13 @@ private fun DetalleGpsActivo(lectura: LecturaGps) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(text = "Precisión horizontal", style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp, color = ColorMuted))
-                Text(text = lectura.precisionTexto, style = GuayabappTypography.titleLarge.copy(fontSize = 22.sp, color = color))
-                Text(text = calidad, style = GuayabappTypography.bodyLarge.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = color))
+                Text(text = "Precisión horizontal", style = LocalLabelMedium.copy(color = ColorMuted))
+                Text(text = lectura.precisionTexto, style = LocalTitleLarge.copy(color = color))
+                Text(text = calidad, style = LocalBodyLarge.copy(fontWeight = FontWeight.Medium, color = color))
             }
             Box(contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(progress = { porcentaje }, modifier = Modifier.size(48.dp), color = color, trackColor = ColorBorde, strokeWidth = 3.dp)
-                Text(text = "${lectura.precision.toInt()}m", style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp, color = color))
+                Text(text = "${lectura.precision.toInt()}m", style = LocalLabelMedium.copy(color = color))
             }
         }
 
@@ -152,8 +159,8 @@ private fun DetalleGpsActivo(lectura: LecturaGps) {
 private fun DetalleGpsBuscando() {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Icon(Icons.Default.GpsNotFixed, contentDescription = null, tint = ColorWarn, modifier = Modifier.size(32.dp))
-        Text(text = "Buscando señal GPS...", style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium), color = ColorWarn)
-        Text(text = "Ubícate en un espacio abierto", style = GuayabappTypography.bodyLarge.copy(fontSize = 12.sp), color = ColorMuted)
+        Text(text = "Buscando señal GPS...", style = LocalBodyLarge.copy(fontWeight = FontWeight.Medium), color = ColorWarn)
+        Text(text = "Ubícate en un espacio abierto", style = LocalBodyLarge.copy(color = ColorMuted), color = ColorMuted)
     }
 }
 
@@ -161,15 +168,15 @@ private fun DetalleGpsBuscando() {
 private fun DetalleGpsError(mensaje: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Icon(Icons.Default.GpsOff, contentDescription = null, tint = ColorMalo, modifier = Modifier.size(30.dp))
-        Text(text = mensaje, style = GuayabappTypography.bodyLarge.copy(fontSize = 12.sp, lineHeight = 16.sp), color = ColorTexto2, textAlign = TextAlign.Center)
+        Text(text = mensaje, style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun FilaDatoGps(label: String, valor: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(text = label, style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp), color = ColorMuted)
-        Text(text = valor, style = GuayabappTypography.labelMedium.copy(fontSize = 13.sp), color = ColorTexto)
+        Text(text = label, style = LocalBodyLarge, color = ColorMuted)
+        Text(text = valor, style = LocalLabelMedium, color = ColorTexto)
     }
 }
 
@@ -188,8 +195,8 @@ fun IndicadorGpsCaptura(estado: EstadoGps, modifier: Modifier = Modifier) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(icono, contentDescription = null, tint = borderColor, modifier = Modifier.size(20.dp))
             Column {
-                Text(text = texto, style = GuayabappTypography.labelMedium.copy(fontSize = 14.sp), color = ColorTexto)
-                Text(text = subtexto, style = GuayabappTypography.bodyLarge.copy(fontSize = 12.sp), color = ColorMuted)
+                Text(text = texto, style = LocalLabelMedium, color = ColorTexto)
+                Text(text = subtexto, style = LocalBodyLarge, color = ColorMuted)
             }
         }
     }

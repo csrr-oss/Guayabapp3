@@ -15,12 +15,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset // CORRECCIÓN: Offset unificado
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.BorderStroke // CORRECCIÓN IMPORTACIÓN FALTA
+import androidx.compose.ui.text.TextStyle 
+import androidx.compose.ui.text.font.FontFamily 
+import androidx.compose.ui.text.font.FontWeight 
 import com.geofield.data.PuntoConMedia
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -61,7 +65,6 @@ private val ColorTexto       = Color(0xFFE8EAF2)
 private val ColorTexto2      = Color(0xFF9AA3BF)
 
 private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-private val LocalBodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 14.sp)
 
 private fun colorIntPorTipoPunto(tipo: String): Int = when (tipo) {
     "visual"      -> android.graphics.Color.parseColor("#87A922")
@@ -214,7 +217,6 @@ private fun actualizarMarcadores(map: MapView, context: Context, puntos: List<Pu
                 fillColor = (color and 0x00FFFFFF) or 0x25000000
                 strokeColor = color
                 strokeWidth = 2.5f
-                // CORRECCIÓN COMPILADOR: Cast explícito a Double exigido por la firma de OSMDroid
                 points = Polygon.pointsAsCircle(GeoPoint(p.lat, p.lon), p.precision.toDouble())
             }
             map.overlays.add(circulo)

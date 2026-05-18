@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,7 +69,7 @@ fun PantallaPermisos(onSolicitarPermisos: () -> Unit) {
         Column(Modifier.widthIn(max = 380.dp).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(22.dp)) {
             Icon(Icons.Default.GpsFixed, null, tint = ColorAccent, modifier = Modifier.size(56.dp))
             Text(text = "Permisos de Operación", style = LocalTitleMedium, color = ColorTexto)
-            Text(text = "Guayabapp requiere acceso a los sensores de hardware para capturar coordenadas satelitales y registrar evidencias multimedia en zonas offline.", style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
+            Text(text = "Guayabapp requires acceso a los sensores de hardware para capturar coordenadas satelitales y registrar evidencias multimedia en zonas offline.", style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ItemPermiso(Icons.Default.GpsFixed, ColorAccent, "Ubicación Satelital Precisa", "Captura de coordenadas universales WGS84.")
@@ -127,8 +128,19 @@ fun ProyectosScreen(onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit
 @Composable
 private fun TarjetaProyecto(proyecto: ProyectoResumen, onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
-    val colorModo = when (proyecto.modoCapa) { ModoCapaBase.GEO_PDF -> ColorAmber ModoCapaBase.OSM_ESTANDAR -> ColorAccent2 ModoCapaBase.ESRI_SATELITE -> ColorAccent }
-    val labelModo = when (proyecto.modoCapa) { ModoCapaBase.GEO_PDF -> "PDF" ModoCapaBase.OSM_ESTANDAR -> "OSM" ModoCapaBase.ESRI_SATELITE -> "SAT" }
+    
+    // CORRECCIÓN SINTAXIS EXPLICITA: Se corrigió el formateo multilínea de asignación para que compile de forma limpia
+    val colorModo = when (proyecto.modoCapa) { 
+        ModoCapaBase.GEO_PDF -> ColorAmber 
+        ModoCapaBase.OSM_ESTANDAR -> ColorAccent2 
+        ModoCapaBase.ESRI_SATELITE -> ColorAccent 
+    }
+    
+    val labelModo = when (proyecto.modoCapa) { 
+        ModoCapaBase.GEO_PDF -> "PDF" 
+        ModoCapaBase.OSM_ESTANDAR -> "OSM" 
+        ModoCapaBase.ESRI_SATELITE -> "SAT" 
+    }
 
     Surface(onClick = onClick, color = ColorSuperficie, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, ColorBorde)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -179,7 +191,7 @@ fun ConfiguracionScreen(onCerrar: () -> Unit) {
             SeccionConfig("RASTREO SATELITAL (GPS)") {
                 ItemConfig(Icons.Default.GpsFixed, ColorAccent, "Intervalo de Muestreo", "2.0 segundos")
                 ItemConfig(Icons.Default.Speed, ColorRed, "Tolerancia Crítica Horizontal", "Alerta si > 10 metros")
-                ItemConfig(Icons.Default.BatteryFull, ColorAmber, "Restricción de Energía", "Fijación Satelital de Hardware")
+                ItemConfig(Icons.Default.BatteryFull, ColorAmber, "Modo de Energía", "Fijación Satelital de Hardware")
             }
             SeccionConfig("SOPORTE CARTOGRÁFICO BASE") {
                 ItemConfig(Icons.Default.Map, ColorAccent2, "Proveedor por Defecto", "ESRI Satélite Offline")

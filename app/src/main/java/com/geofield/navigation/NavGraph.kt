@@ -9,7 +9,9 @@ import androidx.navigation.compose.*
 import com.geofield.ui.*
 import com.geofield.data.GeoFieldDatabase
 
-// ─── DEFINICIÓN DE RUTAS CON IDENTIDAD CORPORATIVA ───────────────────────────
+// ================================================================================
+// ─── DEFINICIÓN DE RUTAS CON IDENTIDAD CORPORATIVA (GUAYABAPP) ──────────────────
+// ================================================================================
 
 sealed class Ruta(val path: String) {
     object Splash        : Ruta("splash")
@@ -20,7 +22,9 @@ sealed class Ruta(val path: String) {
     object Offline       : Ruta("offline")
 }
 
-// ─── NAVGRAPH UNIFICADO Y CORREGIDO (SOPORTE COMPLEMENTARIO DE CICLO DE VIDA) ──
+// ================================================================================
+// ─── NAVGRAPH UNIFICADO Y CORREGIDO (SOPORTE COMPLEMENTARIO DE CICLO DE VÍA) ────
+// ================================================================================
 
 @Composable
 fun GuayabappNavGraph(navController: NavHostController) {
@@ -63,7 +67,7 @@ fun GuayabappNavGraph(navController: NavHostController) {
             val proyectoId = backStack.arguments?.getLong("proyectoId") ?: return@composable
             val context = androidx.compose.ui.platform.LocalContext.current
             
-            // Instanciación persistente de la Base de Datos Room
+            // Instanciación persistente y segura de la Base de Datos Room
             val db = remember { GeoFieldDatabase.getInstance(context) }
             
             // CORRECCIÓN CRÍTICA: Factory nativa para inyectar dependencias sin romper el ciclo de vida al rotar
@@ -76,13 +80,12 @@ fun GuayabappNavGraph(navController: NavHostController) {
                 }
             }
             
-            // Vinculamos de manera segura el ViewModel al ciclo del backStack activo
+            // Vinculamos de manera estable el ViewModel al ciclo del backStack activo
             val viewModel: MapaViewModel = viewModel(factory = factory)
 
             MapaVisorScreen(
                 viewModel = viewModel,
-                onNavegaConfiguracion = { navController.navigate(Ruta.Configuracion.conId(proyectoId)) },
-                onNavegaOffline = { navController.navigate(Ruta.Offline.path) } // Enlace agregado para gestión de mbtiles
+                onNavegaConfiguracion = { navController.navigate(Ruta.Configuracion.conId(proyectoId)) }
             )
         }
 
@@ -100,10 +103,6 @@ fun GuayabappNavGraph(navController: NavHostController) {
             route = Ruta.Configuracion.path,
             arguments = listOf(navArgument("proyectoId") { type = NavType.LongType })
         ) {
-            ConfiguracionScreen(onCerrar = { navController.popBackStack() })
-        }
-    }
-}
             ConfiguracionScreen(onCerrar = { navController.popBackStack() })
         }
     }

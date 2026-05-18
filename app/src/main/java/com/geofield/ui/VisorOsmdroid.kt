@@ -15,14 +15,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset // CORRECCIÓN: Importación del Canvas de Compose añadida
+import androidx.compose.ui.geometry.Offset // CORRECCIÓN: Offset unificado
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.geofield.data.PuntoConMedia
-import com.geofield.theme.GuayabappTypography // CORRECCIÓN: Estilos Nunito vinculados 
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -60,6 +59,9 @@ private val ColorAccent2     = Color(0xFF0090FF)
 private val ColorMuted       = Color(0xFF6B7A99)
 private val ColorTexto       = Color(0xFFE8EAF2)
 private val ColorTexto2      = Color(0xFF9AA3BF)
+
+private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+private val LocalBodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 14.sp)
 
 private fun colorIntPorTipoPunto(tipo: String): Int = when (tipo) {
     "visual"      -> android.graphics.Color.parseColor("#87A922")
@@ -168,7 +170,7 @@ fun VisorOsmdroid(
                 if (fuente == FuenteMapa.OFFLINE && rutaMbtilesOffline == null) return@forEach
                 val activo = fuenteActual == fuente
                 Surface(onClick = { fuenteActual = fuente }, color = if (activo) ColorAccent2 else ColorSuperficie.copy(alpha = 0.90f), shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, if (activo) ColorAccent2 else ColorBorde)) {
-                    Text(text = fuente.label, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), style = GuayabappTypography.labelMedium, color = if (activo) Color.White else ColorTexto2)
+                    Text(text = fuente.label, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), style = LocalLabelMedium, color = if (activo) Color.White else ColorTexto2)
                 }
             }
         }
@@ -186,7 +188,7 @@ fun VisorOsmdroid(
         }
 
         Surface(Modifier.align(Alignment.BottomStart).padding(12.dp), color = Color(0xCC0F1117), shape = RoundedCornerShape(4.dp)) {
-            Text(text = coordenadasCentroText, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = GuayabappTypography.labelMedium, color = ColorAccent)
+            Text(text = coordenadasCentroText, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), style = LocalLabelMedium, color = ColorAccent)
         }
     }
 }
@@ -212,7 +214,8 @@ private fun actualizarMarcadores(map: MapView, context: Context, puntos: List<Pu
                 fillColor = (color and 0x00FFFFFF) or 0x25000000
                 strokeColor = color
                 strokeWidth = 2.5f
-                points = Polygon.pointsAsCircle(GeoPoint(p.lat, p.lon), p.precision.toFloat())
+                // CORRECCIÓN COMPILADOR: Cast explícito a Double exigido por la firma de OSMDroid
+                points = Polygon.pointsAsCircle(GeoPoint(p.lat, p.lon), p.precision.toDouble())
             }
             map.overlays.add(circulo)
         }

@@ -1,5 +1,8 @@
 package com.geofield.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -15,12 +18,15 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.geofield.location.LocationRepository
+import com.geofield.location.LocationForegroundService
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -47,12 +53,20 @@ private object EstilosSoporte {
 
 data class ProyectoResumen(val id: Long, val nombre: String, val totalPuntos: Int, val totalFotos: Int, val ultimaActividad: Long, val modoCapa: ModoCapaBase)
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. SPLASH SCREEN: EVALUADOR LOGÍSTICO COMPLETO
+// ═══════════════════════════════════════════════════════════════════════════════
+
 @Composable
 fun SplashScreen(onListo: () -> Unit) {
+    val context = LocalContext.current
     val alpha by animateFloatAsState(targetValue = 1f, animationSpec = tween(900, easing = EaseOut), label = "fade_in")
     val scale by animateFloatAsState(targetValue = 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "scale_in")
 
-    LaunchedEffect(Unit) { delay(2000); onListo() }
+    LaunchedEffect(Unit) {
+        delay(2200) // Tiempo visual de arranque garantizado
+        onListo()
+    }
 
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(colors = listOf(Color(0xFF1A2416), EstilosSoporte.Fondo), radius = 900f)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.alpha(alpha).scale(scale)) {
@@ -62,31 +76,78 @@ fun SplashScreen(onListo: () -> Unit) {
             Text(text = "Guayabapp", style = EstilosSoporte.TitleLarge, color = EstilosSoporte.Texto, letterSpacing = 1.sp)
             Text(text = "Levantamiento georreferenciado de campo", style = EstilosSoporte.BodyLarge, letterSpacing = .5.sp, color = EstilosSoporte.Texto2)
         }
-        Text(text = "v1.1.0 · Sistema Offline", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp), style = EstilosSoporte.LabelMedium, color = EstilosSoporte.Muted)
+        Text(text = "v1.1.0 · Sistema Resiliente", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp), style = EstilosSoporte.LabelMedium, color = EstilosSoporte.Muted)
     }
 }
 
-@Composable
-fun PantallaPermisos(onSolicitarPermisos: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
-        Column(Modifier.widthIn(max = 380.dp).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(56.dp))
-            Text(text = "Permisos de Operación", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
-            Text(text = "Guayabapp requiere acceso a los sensores de hardware para capturar coordenadas satelitales y registrar evidencias multimedia en zonas offline.", style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2, textAlign = TextAlign.Center)
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. PANTALLA PERMISOS ADAPTATIVA (NUNCA SE APLASTA EN HORIZONTAL)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital Precisa", "Captura de coordenadas universales WGS84.")
-                ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara de Hardware (CameraX)", "Registro de fotografía y clips de video técnicos.")
-                ItemPermiso(Icons.Default.Mic, EstilosSoporte.Purple, "Micrófono Integrado", "Captura de audio ambiental en notas de video.")
-                ItemPermiso(Icons.Default.FolderOpen, EstilosSoporte.Amber, "Almacenamiento Local", "Persistencia de base de datos Room y exportación KML.")
+@Composable
+fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
+    val context = LocalContext.current
+    
+    // Lanzador nativo asíncrono acoplado directamente al árbol de Compose (Cero fallos de click)
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { resultados ->
+        val gpsOk = resultados[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    resultados[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val camaraOk = resultados[Manifest.permission.CAMERA] == true
+        
+        if (gpsOk && camaraOk) {
+            try { LocationForegroundService.iniciar(context) } catch (_: Exception) {}
+            onPermisosConcedidos()
+        }
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(EstilosSoporte.Fondo),
+        contentAlignment = Alignment.Center
+    ) {
+        // CORRECCIÓN ERGONOMÍA: verticalScroll e indicadores holgados para evitar layouts aplastados en horizontal
+        Column(
+            Modifier
+                .widthIn(max = 420.dp)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(Modifier.height(8.dp))
+            Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(52.dp))
+            Text(text = "Permisos de Operación", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
+            Text(text = "Guayabapp requiere acceso directo a los sensores para georreferenciar puntos y registrar evidencias multimedia en campo.", style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2, textAlign = TextAlign.Center)
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital", "Fijación de coordenadas WGS84.")
+                ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara (CameraX)", "Fotografía y video estructural.")
+                ItemPermiso(Icons.Default.Mic, EstilosSoporte.Purple, "Micrófono Integrado", "Notas de audio ambiental.")
+                ItemPermiso(Icons.Default.FolderOpen, EstilosSoporte.Amber, "Almacenamiento", "Persistencia Room y exportación KML.")
             }
 
-            Spacer(Modifier.height(6.dp))
-            Button(onClick = onSolicitarPermisos, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black), shape = RoundedCornerShape(8.dp)) {
+            Spacer(Modifier.height(10.dp))
+            
+            Button(
+                onClick = {
+                    launcher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO
+                    ))
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black),
+                shape = RoundedCornerShape(8.dp)
+            ) {
                 Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Conceder Permisos Técnicos", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
+                Text("Conceder Permisos de Hardware", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
             }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -94,15 +155,19 @@ fun PantallaPermisos(onSolicitarPermisos: () -> Unit) {
 @Composable
 private fun ItemPermiso(icono: androidx.compose.ui.graphics.vector.ImageVector, color: Color, titulo: String, desc: String) {
     Surface(color = EstilosSoporte.Superficie, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.size(36.dp).background(color.copy(.12f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Icon(icono, null, tint = color, modifier = Modifier.size(18.dp)) }
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(34.dp).background(color.copy(.12f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Icon(icono, null, tint = color, modifier = Modifier.size(18.dp)) }
             Column {
                 Text(titulo, style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold), color = EstilosSoporte.Texto)
-                Text(desc, style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2)
+                Text(desc, style = EstilosSoporte.BodyLarge.copy(fontSize = 12.sp), color = EstilosSoporte.Texto2)
             }
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. EXPLORADOR DE PROYECTOS INDEPENDIENTES
+// ═══════════════════════════════════════════════════════════════════════════════
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -309,4 +309,4 @@ private fun crearIconoPinMarcador(context: Context, color: Int, seleccionado: Bo
 private fun modifierBotonOsm() = Modifier
     .size(40.dp)
     .background(EstilosOsmdroid.Superficie.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
-    .border(1.dp, BorderStroke(1.dp, EstilosOsmdroid.Borde), RoundedCornerShape(8.dp))
+    .border(width = 1.dp, color = EstilosOsmdroid.Borde, shape = RoundedCornerShape(8.dp)) // CORRECCIÓN: Firma limpia y directa de Compose

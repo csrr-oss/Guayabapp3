@@ -3,6 +3,7 @@ package com.geofield.ui
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.camera.core.*
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -25,7 +26,9 @@ import androidx.compose.ui.graphics.drawscope.*
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily // CORRECCIÓN IMPORTACIÓN FALTA
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign // CORRECCIÓN IMPORTACIÓN FALTA
 import androidx.compose.ui.unit.*
 import com.geofield.camera.CamaraScreen
 import com.geofield.data.MapaPdfEntity
@@ -40,7 +43,7 @@ private val ColorFondo       = Color(0xFF0F1117)
 private val ColorSuperficie  = Color(0xFF181C27)
 private val ColorSuperficie2 = Color(0xFF1F2436)
 private val ColorBorde       = Color(0xFF2A3045)
-private val ColorAccent      = Color(0xFF87A922) // Verde Guayaba Maduro
+private val ColorAccent      = Color(0xFF87A922) 
 private val ColorAccent2     = Color(0xFF0090FF) 
 private val ColorMuted       = Color(0xFF6B7A99)
 private val ColorTexto       = Color(0xFFE8EAF2)

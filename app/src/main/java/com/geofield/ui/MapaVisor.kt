@@ -295,7 +295,31 @@ internal fun PanelDetallePunto(puntoConMedia: PuntoConMedia, onGuardar: (String,
 private fun CampoDetalle(label: String, content: @Composable ColumnScope.() -> Unit) { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { Text(text = label, style = EstilosVisor.LabelMedium.copy(color = EstilosVisor.Muted, letterSpacing = 0.5.sp)); content() } }
 
 @Composable
-internal fun BottomBarExportacion(totalPuntos: Int, totalFotos: Int, exportando: Boolean, onExportar: () -> Unit) { Surface(color = EstilosVisor.Superficie) { Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { Text(text = "$totalPuntos puntos registrados · $totalFotos fotos · Listo para exportación SIG", style = EstilosVisor.LabelMedium.copy(color = EstilosVisor.Muted), modifier = Modifier.weight(1f)); if (exportando) CircularProgressIndicator(Modifier.size(20.dp), color = EstilosVisor.Accent, strokeWidth = 2.dp) else Button(onClick = onExportar, colors = ButtonDefaults.buttonColors(containerColor = EstilosVisor.Accent, contentColor = Color.Black), shape = RoundedCornerShape(6.dp)) { Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Exportar KML", style = EstilosVisor.BodyLarge.copy(fontWeight = FontWeight.Bold)) } } } }
+internal fun BottomBarExportacion(totalPuntos: Int, totalFotos: Int, exportando: Boolean, onExportar: () -> Unit) { 
+    Surface(color = Color(0xFF181C27)) { 
+        // CORRECCIÓN 7: Reducido padding de vertical 10.dp a 4.dp para maximizar el área útil cartográfica
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { 
+            Text(
+                text = "$totalPuntos pts · $totalFotos fotos · SIG Listo", 
+                style = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 11.sp), // Fuente compactada
+                color = Color(0xFF6B7A99), 
+                modifier = Modifier.weight(1f)
+            ) 
+            if (exportando) {
+                CircularProgressIndicator(Modifier.size(16.dp), color = Color(0xFF87A922), strokeWidth = 1.5.dp)
+            } else {
+                Button(
+                    onClick = onExportar, 
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF87A922), contentColor = Color.Black), 
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp) // Botón ultra compacto
+                ) { 
+                    Text("Exportar KML", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold)) 
+                } 
+            } 
+        } 
+    } 
+}
 
 @Composable
 fun InvitacionCargarPdf(onCargar: () -> Unit, onUsarOsm: () -> Unit) { Box(Modifier.fillMaxSize().background(EstilosVisor.Fondo), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(32.dp)) { Box(Modifier.size(80.dp).background(EstilosVisor.Superficie2, CircleShape).border(1.dp, EstilosVisor.Borde, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.PictureAsPdf, null, tint = EstilosVisor.Amber, modifier = Modifier.size(36.dp)) }; Text("Sin GeoPDF cargado", style = EstilosVisor.TitleMedium, color = EstilosVisor.Texto); Text("Importa un plano georreferenciado local.", style = EstilosVisor.BodyLarge, textAlign = TextAlign.Center, color = EstilosVisor.Texto2); Button(onClick = onCargar, colors = ButtonDefaults.buttonColors(containerColor = EstilosVisor.Amber, contentColor = Color.Black), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Cargar GeoPDF de Campo", style = EstilosVisor.BodyLarge.copy(fontWeight = FontWeight.Bold)) }; OutlinedButton(onClick = onUsarOsm, border = BorderStroke(1.dp, EstilosVisor.Borde), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = EstilosVisor.Accent2)) { Icon(Icons.Default.Map, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text("Cambiar a Mapa Satélite", style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Accent2)) } } } }

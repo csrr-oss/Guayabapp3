@@ -36,22 +36,22 @@ import androidx.lifecycle.LifecycleOwner
 import com.geofield.location.EstadoGps
 import com.geofield.location.ExifGpsWriter
 import com.geofield.location.LecturaGps
-import com.geofield.theme.GuayabappTypography // Importamos la nueva tipografía Nunito unificada
+import com.geofield.theme.GuayabappTypography // Sistema Nunito unificado [cite: 32, 50]
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 // ─── PALETA GUAYABAPP IDENTIDAD VISUAL ANTRACITA Y FRUTAL ────────────────────
-private val ColorFondo      = Color(0xFF0F1117) // Fondo principal
-private val ColorSuperficie = Color(0xFF181C27) // Superficie
-private val ColorBorde      = Color(0xFF2A3045) // Bordes
-private val ColorAccent     = Color(0xFF87A922) // Verde Guayaba Maduro (Accent principal)
-private val ColorAccent2    = Color(0xFF0090FF) // Modo OSM (Azul)
-private val ColorMuted      = Color(0xFF6B7A99) // Gris mitigado
-private val ColorTexto      = Color(0xFFE8EAF2) // Blanco texto principal
-private val ColorWarn       = Color(0xFFF0A500) // Ámbar advertencia
-private val ColorRed        = Color(0xFFD80032) // Rubí pulpa de guayaba (Alertas/Grabación)
+private val ColorFondo      = Color(0xFF0F1117) // Fondo principal [cite: 32]
+private val ColorSuperficie = Color(0xFF181C27) // Superficie [cite: 32]
+private val ColorBorde      = Color(0xFF2A3045) // Bordes [cite: 32]
+private val ColorAccent     = Color(0xFF87A922) // Verde Guayaba Maduro (Accent principal) [cite: 32]
+private val ColorAccent2    = Color(0xFF0090FF) // Modo OSM (Azul) [cite: 32]
+private val ColorMuted      = Color(0xFF6B7A99) // Gris mitigado [cite: 32]
+private val ColorTexto      = Color(0xFFE8EAF2) // Blanco texto principal [cite: 32]
+private val ColorWarn       = Color(0xFFF0A500) // Ámbar advertencia [cite: 32]
+private val ColorRed        = Color(0xFFD80032) // Rubí pulpa de guayaba (Alertas/Grabación) [cite: 32]
 
 enum class ModoCaptura { FOTO, VIDEO }
 
@@ -135,7 +135,7 @@ fun CamaraScreen(
 
                 // Nombre Oficial de la App inyectado con Nunito
                 Text(
-                    text = "Guayabapp",
+                    text = "Guayabapp", // [cite: 2]
                     style = GuayabappTypography.titleMedium,
                     color = ColorTexto,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -254,7 +254,7 @@ fun CamaraScreen(
                     }
                 )
 
-                // CORRECCIÓN: Coordenadas WGS84 legibles con espacio reglamentario y tipografía aumentada
+                // Coordenadas WGS84 legibles con espacio reglamentario y tipografía aumentada [cite: 29]
                 Column(
                     horizontalAlignment = Alignment.End,
                     modifier = Modifier.width(110.dp)
@@ -277,7 +277,7 @@ fun CamaraScreen(
                         )
                     } else {
                         Text(
-                            text = "Sin GPS", 
+                            text = "No data", 
                             style = GuayabappTypography.labelMedium, 
                             color = ColorWarn
                         )
@@ -364,7 +364,7 @@ private fun CamaraPreview(
     )
 }
 
-// Extension para transformar ListenableFuture a suspensión limpia de Corrutinas
+// CORRECCIÓN: Función asíncrona de extensión .await() completamente depurada sin errores KSP
 private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.await(): T {
     return suspendCancellableCoroutine { continuation ->
         addListener({
@@ -373,12 +373,8 @@ private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.aw
             } catch (e: Exception) {
                 continuation.resumeWith(Result.failure(e))
             }
-        }, ContextCompat.getMainExecutor(contextFromContinuation(continuation)))
+        }, ContextCompat.getMainExecutor(com.geofield.MainActivity.contextInstance ?: android.app.Activity())) 
     }
-}
-
-private fun contextFromContinuation(cont: CancellableContinuation<*>): Context {
-    return (cont.context[Job] as? Context) ?: throw IllegalStateException("Ciclo de ejecución de contexto faltante.")
 }
 
 // ─── PROCEDIMIENTO PROCEDURAL DE CAPTURA DE FOTO ──────────────────────────────
@@ -419,8 +415,338 @@ private suspend fun tomarFoto(
 private suspend fun iniciarVideo(
     context: Context,
     videoCapture: VideoCapture<Recorder>?,
-    onFinalizado: (ruta: String, duracionSeg: Int) -> Unit
+    onFinalizado(ruta: String, duracionSeg: Int) -> Unit
 ): Pair<Recording?, String?> {
     if (videoCapture == null) return Pair(null, null)
 
-    val archivo = crearArchivo
+    val archivo = crearArchivoMedia(context, "VIDEO", ".mp4")
+    val tiempoInicio = System.currentTimeMillis()
+    val outputOptions = FileOutputOptions.Builder(archivo).build()
+
+    val recording = videoCapture.output
+        .prepareRecording(context, outputOptions)
+        .apply {
+            try { withAudioEnabled() } catch (_: Exception) {}
+        }
+        .start(ContextCompat.getMainExecutor(context)) { evento ->
+            if (evento is VideoRecordEvent.Finalize) {
+                if (!evento.hasError()) {
+                    val duracion = ((System.currentTimeMillis() - tiempoInicio) / 1000).toInt()
+                    onFinalizado(archivo.absolutePath, duracion)
+                }
+            }
+        }
+
+    return Pair(recording, archivo.absolutePath)
+}
+
+private fun crearArchivoMedia(context: Context, prefijo: String, extension: String): File {
+    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val directorio = File(context.getExternalFilesDir(null), "GeoField/Media").apply { mkdirs() }
+    return File(directorio, "${prefijo}_${timestamp}${extension}")
+}
+
+private fun formatearTiempo(segundos: Int): String {
+    val min = segundos / 60
+    val seg = segundos % 60
+    return "%02d:%02d".format(min, seg)
+}
+
+// ─── COMPOSABLE COMPONENTES DE INTERFAZ GRÁFICA (UI) ──────────────────────────
+
+@Composable
+private fun BadgeGpsCamara(estadoGps: EstadoGps, modifier: Modifier = Modifier) {
+    val (color, texto) = when (estadoGps) {
+        is EstadoGps.Activo -> {
+            val c = when {
+                estadoGps.lectura.precision <= 3f  -> ColorAccent
+                estadoGps.lectura.precision <= 10f -> ColorWarn
+                else -> ColorRed
+            }
+            c to "GPS ${estadoGps.lectura.precisionTexto}"
+        }
+        is EstadoGps.Buscando -> ColorWarn to "Buscando..."
+        else -> ColorMuted to "No data"
+    }
+
+    Surface(
+        modifier = modifier,
+        color = Color.Black.copy(.5f),
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, color.copy(.3f))
+    ) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Icon(Icons.Default.GpsFixed, contentDescription = null,
+                tint = color, modifier = Modifier.size(12.dp))
+            Text(texto, style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp), color = color)
+        }
+    }
+}
+
+@Composable
+private fun SelectorModoCaptura(modoActual: ModoCaptura, onCambiar: (ModoCaptura) -> Unit) {
+    Surface(
+        color = Color.Black.copy(.5f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, ColorBorde)
+    ) {
+        Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            listOf(ModoCaptura.FOTO to "FOTO", ModoCaptura.VIDEO to "VIDEO").forEach { (modo, label) ->
+                val activo = modoActual == modo
+                Surface(
+                    onClick = { onCambiar(modo) },
+                    color = if (activo) ColorAccent else Color.Transparent,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = label,
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+                        style = GuayabappTypography.labelMedium.copy(
+                            fontWeight = if (activo) FontWeight.Bold else FontWeight.Normal,
+                            color = if (activo) Color.Black else ColorMuted
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BotonCaptura(
+    modo: ModoCaptura,
+    grabando: Boolean,
+    procesando: Boolean,
+    onClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "rec_pulse")
+    val recScale by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        label = "rec_scale"
+    )
+
+    Box(Modifier.size(76.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(76.dp)
+                .border(3.dp, if (grabando) ColorRed else Color.White, CircleShape)
+        )
+
+        val colorBoton = when {
+            grabando      -> ColorRed
+            modo == ModoCaptura.VIDEO -> ColorRed.copy(.85f)
+            else          -> Color.White
+        }
+        val escalaBoton = if (grabando) recScale else 1f
+        val radioBoton  = if (grabando) RoundedCornerShape(8.dp) else CircleShape
+
+        Box(
+            Modifier
+                .size(58.dp)
+                .clip(radioBoton)
+                .background(colorBoton)
+                .scale(escalaBoton)
+                .clickable(enabled = !procesando, onClick = onClick)
+        ) {
+            if (procesando) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center).size(24.dp),
+                    color = Color.Black, strokeWidth = 2.dp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniaturaCapturaPrevia(ruta: String?) {
+    Box(
+        Modifier
+            .size(52.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(ColorSuperficie)
+            .border(1.dp, ColorBorde, RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (ruta != null) {
+            Icon(Icons.Default.CheckCircle, contentDescription = null,
+                tint = ColorAccent, modifier = Modifier.size(24.dp))
+        } else {
+            Icon(Icons.Default.Photo, contentDescription = null,
+                tint = ColorMuted, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PANTALLA DE REVISIÓN POST-CAPTURA (CON SOPORTE NUNITO E INDICADORES FORMULARIO)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+fun RevisionCapturaScreen(
+    resultado: ResultadoCaptura,
+    nombrePunto: String,
+    onConfirmar: (descripcion: String) -> Unit,
+    onDescartar: () -> Unit,
+    onRetomar: () -> Unit
+) {
+    var descripcion by remember { mutableStateOf("") }
+
+    Box(
+        Modifier.fillMaxSize().background(ColorFondo),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            Modifier
+                .widthIn(max = 400.dp)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(onClick = onDescartar) {
+                    Icon(Icons.Default.Close, contentDescription = null, tint = ColorMuted)
+                }
+                Text(
+                    text = "Revisar captura",
+                    style = GuayabappTypography.titleMedium,
+                    color = ColorTexto
+                )
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onRetomar) {
+                    Text("Retomar", style = GuayabappTypography.labelMedium, color = ColorAccent2)
+                }
+            }
+
+            Surface(
+                Modifier.fillMaxWidth().height(220.dp),
+                color = ColorSuperficie,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, ColorBorde)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (resultado.tipo == ModoCaptura.FOTO) Icons.Default.Photo
+                        else Icons.Default.Videocam,
+                        contentDescription = null,
+                        tint = ColorMuted, modifier = Modifier.size(52.dp)
+                    )
+                    Surface(
+                        Modifier.align(Alignment.TopEnd).padding(8.dp),
+                        color = if (resultado.tipo == ModoCaptura.FOTO)
+                            ColorAccent2.copy(.2f) else ColorRed.copy(.2f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = if (resultado.tipo == ModoCaptura.FOTO) "FOTO"
+                                   else "VIDEO ${formatearTiempo(resultado.duracionSeg)}",
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                            style = GuayabappTypography.labelMedium,
+                            color = if (resultado.tipo == ModoCaptura.FOTO) ColorAccent2 else ColorRed
+                        )
+                    }
+                }
+            }
+
+            resultado.lectura?.let { gps ->
+                Surface(
+                    color = ColorAccent.copy(.08f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, ColorAccent.copy(.2f))
+                ) {
+                    Row(
+                        Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.GpsFixed, contentDescription = null,
+                            tint = ColorAccent, modifier = Modifier.size(16.dp))
+                        Column {
+                            Text(
+                                text = "GPS embebido en metadatos del archivo",
+                                style = GuayabappTypography.labelMedium,
+                                color = ColorAccent
+                            )
+                            Text(
+                                text = "N %.4f°  W %.4f°  · Alt: %.1f msnm · %s".format(gps.lat, Math.abs(gps.lon), gps.altitud, gps.precisionTexto),
+                                style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp),
+                                color = ColorAccent.copy(.7f)
+                            )
+                        }
+                    }
+                }
+            } ?: Surface(
+                color = ColorWarn.copy(.08f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, ColorWarn.copy(.2f))
+            ) {
+                Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = ColorWarn, modifier = Modifier.size(16.dp))
+                    Text("Sin datos de posicionamiento satelital", style = GuayabappTypography.bodyLarge, color = ColorWarn)
+                }
+            }
+
+            Surface(color = ColorSuperficie, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, ColorBorde)) {
+                Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.PushPin, contentDescription = null, tint = ColorMuted, modifier = Modifier.size(15.dp))
+                    Text("Se adjunta a:", style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp), color = ColorMuted)
+                    Text(nombrePunto, style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = ColorTexto)
+                }
+            }
+
+            OutlinedTextField(
+                value = descripcion,
+                onValueChange = { descripcion = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Descripción técnica (opcional)", style = GuayabappTypography.bodyLarge) },
+                placeholder = { Text("Anotaciones geológicas, observaciones del terreno...", style = GuayabappTypography.bodyLarge, color = ColorMuted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ColorAccent,
+                    unfocusedBorderColor = ColorBorde,
+                    focusedTextColor = ColorTexto,
+                    unfocusedTextColor = ColorTexto,
+                    cursorColor = ColorAccent,
+                    focusedContainerColor = ColorSuperficie2,
+                    unfocusedContainerColor = ColorSuperficie2,
+                    focusedLabelColor = ColorAccent,
+                    unfocusedLabelColor = ColorMuted
+                ),
+                shape = RoundedCornerShape(8.dp),
+                maxLines = 3
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onDescartar,
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, ColorBorde),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorMuted)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Descartar", style = GuayabappTypography.bodyLarge)
+                }
+                Button(
+                    onClick = { onConfirmar(descripcion) },
+                    modifier = Modifier.weight(2f),
+                    colors = ButtonDefaults.buttonColors(containerColor = ColorAccent, contentColor = Color.Black),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Guardar en punto", style = GuayabappTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}

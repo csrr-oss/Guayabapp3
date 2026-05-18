@@ -1,5 +1,6 @@
 package com.geofield
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // CORRECCIÓN RADICAL 1: Forzar orientación vertical por hardware eliminando caprichos del sistema
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        
         locationRepo = LocationRepository(applicationContext)
         
         setContent {
@@ -26,7 +31,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // El enrutador ahora toma el control total desde el segundo cero
                     val navController = rememberNavController()
                     GuayabappNavGraph(navController = navController)
                 }
@@ -36,7 +40,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Si el usuario ya concedió los permisos en la UI, el servicio se levanta al regresar
         if (locationRepo.tienePermisos()) {
             LocationForegroundService.iniciar(this)
         }

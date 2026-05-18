@@ -6,6 +6,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn // IMPORTACIÓN REQUERIDA FIJADA
+import androidx.compose.foundation.lazy.items // IMPORTACIÓN REQUERIDA FIJADA
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,9 +25,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geofield.location.LocationForegroundService
+import com.geofield.navigation.ModoCapaBase // Vinculación limpia con el enum del NavGraph
 import kotlinx.coroutines.delay
-
-enum class ModoCapaBase { OSM_ESTANDAR, ESRI_SATELITE, GEO_PDF }
+import java.text.SimpleDateFormat
+import java.util.*
 
 private object EstilosSoporte {
     val Fondo       = Color(0xFF0F1117)
@@ -43,29 +46,19 @@ private object EstilosSoporte {
 
     val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     val TitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-    val TitleLarge  = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 32.sp) // Escala aumentada
+    val TitleLarge  = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 32.sp)
     val BodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 14.sp)
 }
 
 data class ProyectoResumen(val id: Long, val nombre: String, val totalPuntos: Int, val totalFotos: Int, val ultimaActividad: Long, val modoCapa: ModoCapaBase)
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUNTO 2: SPLASH SCREEN CON LOGO GRANDE E IMPACTANTE
-// ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun SplashScreen(onListo: () -> Unit) {
     LaunchedEffect(Unit) { delay(2200); onListo() }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            // Logo Oficial escalado a gran tamaño (96dp -> 140dp) para imponer presencia de marca
-            Box(
-                Modifier
-                    .size(140.dp)
-                    .background(EstilosSoporte.Superficie, CircleShape)
-                    .border(3.dp, EstilosSoporte.Accent, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.size(140.dp).background(EstilosSoporte.Superficie, CircleShape).border(3.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(72.dp))
             }
             Text(text = "Guayabapp", style = EstilosSoporte.TitleLarge, color = EstilosSoporte.Texto, letterSpacing = 1.5.sp)
@@ -88,6 +81,13 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
         Column(Modifier.width(360.dp).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
             Text(text = "Permisos Requeridos", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
+            
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital", "Fijación WGS84.")
+                ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara (CameraX)", "Evidencias estructural.")
+            }
+
+            Spacer(Modifier.height(4.dp))
             Button(onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black)) {
                 Text("Habilitar Sensores de Campo", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
             }
@@ -95,9 +95,19 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUNTO 7: PROYECTOS SCREEN CON LOGO CIRCULAR EN LA PARTE SUPERIOR
-// ═══════════════════════════════════════════════════════════════════════════════
+@Composable
+private fun ItemPermiso(icono: androidx.compose.ui.graphics.vector.ImageVector, color: Color, titulo: String, desc: String) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = EstilosSoporte.Superficie, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(32.dp).background(color.copy(.12f), RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) { Icon(icono, null, tint = color, modifier = Modifier.size(16.dp)) }
+            Column {
+                Text(titulo, style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp), color = EstilosSoporte.Texto)
+                Text(desc, style = EstilosSoporte.BodyLarge.copy(fontSize = 11.sp), color = EstilosSoporte.Texto2)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit) {
@@ -106,7 +116,6 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         topBar = { 
             Surface(color = EstilosSoporte.Superficie) { 
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { 
-                    // LOGO INYECTADO EN LA PARTE SUPERIOR IZQUIERDA DEL TOOLBAR
                     Box(Modifier.size(28.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.2.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(14.dp))
                     }
@@ -146,9 +155,6 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUNTO 3: NUEVO PROYECTO CON SELECCIÓN REAL DE SATÉLITE O PDF
-// ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun NuevoProyectoScreen(onCrear: (String, ModoCapaBase) -> Unit, onCancelar: () -> Unit) {
     var nombre by remember { mutableStateOf("") }
@@ -167,7 +173,6 @@ fun NuevoProyectoScreen(onCrear: (String, ModoCapaBase) -> Unit, onCancelar: () 
                     singleLine = true
                 )
 
-                // SELECTORES DE ESTRATEGIA CARTOGRÁFICA VISIBLES
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
                         onClick = { modoElegido = ModoCapaBase.ESRI_SATELITE },

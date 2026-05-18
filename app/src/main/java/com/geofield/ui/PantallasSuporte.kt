@@ -25,17 +25,19 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
-private val ColorFondo       = Color(0xFF0F1117)
-private val ColorSuperficie  = Color(0xFF181C27)
-private val ColorSuperficie2 = Color(0xFF1F2436)
-private val ColorBorde       = Color(0xFF2A3045)
-private val ColorAccent      = Color(0xFF87A922) 
-private val ColorAccent2     = Color(0xFF0090FF) 
-private val ColorMuted       = Color(0xFF6B7A99)
-private val ColorTexto       = Color(0xFFE8EAF2)
-private val ColorTexto2      = Color(0xFF9AA3BF)
-private val ColorAmber       = Color(0xFFF0A500) 
-private val ColorPurple      = Color(0xFF7C6AF7) 
+// CORRECCIÓN ACTIONS: Se removió el modificador 'private' para permitir acceso global de compilación
+val ColorFondo       = Color(0xFF0F1117)
+val ColorSuperficie  = Color(0xFF181C27)
+val ColorSuperficie2 = Color(0xFF1F2436)
+val ColorBorde       = Color(0xFF2A3045)
+val ColorAccent      = Color(0xFF87A922) 
+val ColorAccent2     = Color(0xFF0090FF) 
+val ColorMuted       = Color(0xFF6B7A99)
+val ColorTexto       = Color(0xFFE8EAF2)
+val ColorTexto2      = Color(0xFF9AA3BF)
+val ColorAmber       = Color(0xFFF0A500) 
+val ColorPurple      = Color(0xFF7C6AF7) 
+val ColorRed         = Color(0xFFD80032)
 
 private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
 private val LocalTitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -129,7 +131,6 @@ fun ProyectosScreen(onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit
 private fun TarjetaProyecto(proyecto: ProyectoResumen, onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     
-    // CORRECCIÓN ACTIONS: Sentencias desglosadas en bloque limpio multilínea (Adiós errores de KSP)
     val colorModo = when (proyecto.modoCapa) { 
         ModoCapaBase.GEO_PDF -> ColorAmber 
         ModoCapaBase.OSM_ESTANDAR -> ColorAccent2 

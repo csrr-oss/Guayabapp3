@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,12 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.text.TextStyle 
-import androidx.compose.ui.text.font.FontFamily 
-import androidx.compose.ui.text.font.FontWeight 
 import com.geofield.data.PuntoConMedia
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -41,21 +42,17 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 
-// CORRECCIÓN ACTIONS: Reinyectadas declaraciones estructurales perdidas del mapeo de tiles
 enum class FuenteMapa(val label: String) {
-    OSM_STANDARD("Calles OSM"),
-    ESRI_SATELITE("Satélite ESRI"),
-    OSM_TOPO("Topografía"),
-    OFFLINE("Offline (.mbtiles)")
+    ESRI_SATELITE("Satélite (ESRI)"),
+    OSM_STANDARD("Mapa Base (OSM)"),
+    OSM_TOPO("Topografía (Topo)")
 }
 
-// CORRECCIÓN ACTIONS: Reinyectado método procedural de enganche de tiles
-fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
+private fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
     when (fuente) {
         FuenteMapa.OSM_STANDARD -> TileSourceFactory.MAPNIK
         FuenteMapa.ESRI_SATELITE -> XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
         FuenteMapa.OSM_TOPO -> XYTileSource("OpenTopoMap", 0, 17, 256, ".png", arrayOf("https://a.tile.opentopomap.org/", "https://b.tile.opentopomap.org/", "https://c.tile.opentopomap.org/"))
-        FuenteMapa.OFFLINE -> TileSourceFactory.MAPNIK
     }
 
 private object EstilosOsmdroid {
@@ -63,10 +60,7 @@ private object EstilosOsmdroid {
     val Borde       = Color(0xFF2A3045)
     val Accent      = Color(0xFF87A922)
     val Accent2     = Color(0xFF0090FF)
-    val Muted       = Color(0xFF6B7A99)
     val Texto       = Color(0xFFE8EAF2)
-    val Texto2      = Color(0xFF9AA3BF)
-
     val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
 }
 
@@ -83,7 +77,6 @@ fun VisorOsmdroid(
     puntoSeleccionado: PuntoConMedia?,
     latInicial: Double = 6.4,
     lonInicial: Double = -71.75,
-    rutaMbtilesOffline: String? = null,
     onSeleccionarPunto: (Long?) -> Unit,
     onCapturarPunto: (lat: Double, lon: Double, alt: Double) -> Unit
 ) {
@@ -96,7 +89,6 @@ fun VisorOsmdroid(
         Configuration.getInstance().apply {
             userAgentValue = "Guayabapp/1.1"
             osmdroidTileCache = File(context.cacheDir, "osm_tiles")
-            tileFileSystemCacheTrimBytes = 200L * 1024 * 1024
         }
     }
 
@@ -122,15 +114,32 @@ fun VisorOsmdroid(
                     setBuiltInZoomControls(false)
                     controller.setZoom(13.0)
                     controller.setCenter(GeoPoint(latInicial, lonInicial))
-                    minZoomLevel = 5.0
-                    maxZoomLevel = 20.0
 
                     val rotationGestureOverlay = RotationGestureOverlay(this).apply { isEnabled = true }
                     overlays.add(rotationGestureOverlay)
 
+                    // ── CONFIGURACIÓN DEL PUNTERO AZUL ESTILO GOOGLE MAPS ────────────────
                     val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this).apply {
                         enableMyLocation()
                         disableFollowLocation()
+                        
+                        // Fabricamos el círculo azul nativo de precisión de Google Maps
+                        val sizePx = (24 * ctx.resources.displayMetrics.density).toInt()
+                        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(bitmap)
+                        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                        
+                        // Borde blanco de contraste
+                        paint.color = android.graphics.Color.WHITE
+                        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
+                        
+                        // Centro azul Google
+                        paint.color = android.graphics.Color.parseColor("#1A73E8")
+                        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * ctx.resources.displayMetrics.density), paint)
+                        
+                        val drawablePin = BitmapDrawable(ctx.resources, bitmap)
+                        setPersonIcon(bitmap)
+                        setPersonAnchor(0.5f, 0.5f)
                     }
                     overlays.add(locationOverlay)
 
@@ -156,13 +165,11 @@ fun VisorOsmdroid(
             },
             update = { mapView ->
                 mapView.setTileSource(tileSourceParaModo(fuenteActual))
-                if (fuenteActual == FuenteMapa.OFFLINE && rutaMbtilesOffline != null) {
-                    cargarTilesOffline(mapView, rutaMbtilesOffline)
-                }
                 mapView.invalidate()
             }
         )
 
+        // Mira central de retícula para mapeo geotécnico
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val centroX = size.width / 2f
             val centroY = size.height / 2f
@@ -172,16 +179,43 @@ fun VisorOsmdroid(
             drawCircle(Color.White, 3.5.dp.toPx(), Offset(centroX, centroY))
         }
 
-        Column(Modifier.align(Alignment.TopStart).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FuenteMapa.entries.forEach { fuente ->
-                if (fuente == FuenteMapa.OFFLINE && rutaMbtilesOffline == null) return@forEach
-                val activo = fuenteActual == fuente
-                Surface(onClick = { fuenteActual = fuente }, color = if (activo) EstilosOsmdroid.Accent2 else EstilosOsmdroid.Superficie.copy(alpha = 0.90f), shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, if (activo) EstilosOsmdroid.Accent2 else EstilosOsmdroid.Borde)) {
-                    Text(text = fuente.label, modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp), style = EstilosOsmdroid.LabelMedium, color = if (activo) Color.White else EstilosOsmdroid.Texto2)
-                }
+        // ── BOTÓN FLOTANTE DE CAPAS UNIFICADO (CONTROL CÍCLICO ÚNICO) ───────────────
+        Column(
+            Modifier.align(Alignment.TopEnd).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FloatingActionButton(
+                onClick = {
+                    // Alternancia cíclica limpia entre mapas base
+                    fuenteActual = when (fuenteActual) {
+                        FuenteMapa.ESRI_SATELITE -> FuenteMapa.OSM_STANDARD
+                        FuenteMapa.OSM_STANDARD  -> FuenteMapa.OSM_TOPO
+                        FuenteMapa.OSM_TOPO      -> FuenteMapa.ESRI_SATELITE
+                    }
+                },
+                modifier = Modifier.size(44.dp),
+                containerColor = EstilosOsmdroid.Superficie.copy(alpha = 0.90f),
+                contentColor = EstilosOsmdroid.Accent,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Layers, contentDescription = "Alternar Capa Base", modifier = Modifier.size(20.dp))
+            }
+            
+            // Indicador de texto flotante minimalista temporal de la capa activa
+            Surface(
+                color = Color.Black.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = fuenteActual.label,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                    style = EstilosOsmdroid.LabelMedium.copy(fontSize = 10.sp),
+                    color = Color.White
+                )
             }
         }
 
+        // Controles de Zoom inferiores y gatillo de Mi Ubicación
         Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             IconButton(onClick = { mapViewRef?.controller?.zoomIn() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Add, null, tint = EstilosOsmdroid.Texto) }
             IconButton(onClick = { mapViewRef?.controller?.zoomOut() }, modifier = modifierBotonOsm()) { Icon(Icons.Default.Remove, null, tint = EstilosOsmdroid.Texto) }
@@ -201,7 +235,7 @@ fun VisorOsmdroid(
 }
 
 private fun actualizarMarcadores(map: MapView, context: Context, puntos: List<PuntoConMedia>, puntoSeleccionadoId: Long?, onSeleccionar: (Long?) -> Unit) {
-    map.overlays.removeAll { it is Marker }
+    map.overlays.removeAll { it is Marker || it is Polygon }
     puntos.forEach { puntoCM ->
         val p = puntoCM.punto
         val seleccionado = p.id == puntoSeleccionadoId
@@ -268,13 +302,11 @@ private fun crearIconoPinMarcador(context: Context, color: Int, seleccionado: Bo
         paint.textAlign = Paint.Align.CENTER
         canvas.drawText("📷", anchoPin - 10f, 13f, paint)
     }
-    return android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
+    return BitmapDrawable(context.resources, bitmap)
 }
-
-private fun cargarTilesOffline(mapView: MapView, rutaMbtiles: String) {}
 
 @Composable
 private fun modifierBotonOsm() = Modifier
     .size(40.dp)
     .background(EstilosOsmdroid.Superficie.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
-    .border(1.dp, EstilosOsmdroid.Borde, RoundedCornerShape(8.dp))
+    .border(1.dp, BorderStroke(1.dp, EstilosOsmdroid.Borde), RoundedCornerShape(8.dp))

@@ -44,6 +44,20 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 
+// ─── DECLARACIONES ESTRUCTURALES DEL MAPA (CORREGIDAS Y VISIBLES) ───────────
+enum class FuenteMapa(val label: String) {
+    ESRI_SATELITE("Satélite (ESRI)"),
+    OSM_STANDARD("Mapa Base (OSM)"),
+    OSM_TOPO("Topografía (Topo)")
+}
+
+fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
+    when (fuente) {
+        FuenteMapa.OSM_STANDARD -> TileSourceFactory.MAPNIK
+        FuenteMapa.ESRI_SATELITE -> XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
+        FuenteMapa.OSM_TOPO -> XYTileSource("OpenTopoMap", 0, 17, 256, ".png", arrayOf("https://a.tile.opentopomap.org/", "https://b.tile.opentopomap.org/", "https://c.tile.opentopomap.org/"))
+    }
+
 private object EstilosOsmdroid {
     val Superficie  = Color(0xFF181C27)
     val Borde       = Color(0xFF2A3045)
@@ -74,7 +88,7 @@ fun VisorOsmdroid(
     var fuenteActual by remember { mutableStateOf(FuenteMapa.ESRI_SATELITE) }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
     var coordenadasCentroText by remember { mutableStateOf("No data") }
-    var menuDesplegado by remember { mutableStateOf(false) } // Gatillo del menú flotante
+    var menuDesplegado by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         Configuration.getInstance().apply { userAgentValue = "Guayabapp/1.1" }
@@ -134,7 +148,7 @@ fun VisorOsmdroid(
             drawCircle(Color.White, 3.5.dp.toPx(), Offset(centroX, centroY))
         }
 
-        // ── CORRECCIÓN 6: BOTÓN FLOTANTE QUE DESPLIEGA EL MENÚ DE 3 OPCIONES EXPLICITAS ──
+        // Menú flotante de capas unificado
         Box(Modifier.align(Alignment.TopEnd).padding(14.dp)) {
             FloatingActionButton(
                 onClick = { menuDesplegado = true },
@@ -166,7 +180,6 @@ fun VisorOsmdroid(
             }
         }
 
-        // CORRECCIÓN 5: Envolver captura en Dispatchers.Main para evitar cierres forzados por sub-hilos de base de datos
         FloatingActionButton(
             onClick = { 
                 scope.launch(Dispatchers.Main) {

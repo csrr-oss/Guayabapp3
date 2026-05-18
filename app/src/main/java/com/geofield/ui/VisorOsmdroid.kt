@@ -19,12 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.text.TextStyle 
+import androidx.compose.ui.text.font.FontFamily 
+import androidx.compose.ui.text.font.FontWeight 
 import com.geofield.data.PuntoConMedia
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -41,7 +41,23 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 
-// Encapsulado en contenedor local único para evitar colisiones lógicas globales
+// CORRECCIÓN ACTIONS: Reinyectadas declaraciones estructurales perdidas del mapeo de tiles
+enum class FuenteMapa(val label: String) {
+    OSM_STANDARD("Calles OSM"),
+    ESRI_SATELITE("Satélite ESRI"),
+    OSM_TOPO("Topografía"),
+    OFFLINE("Offline (.mbtiles)")
+}
+
+// CORRECCIÓN ACTIONS: Reinyectado método procedural de enganche de tiles
+fun tileSourceParaModo(fuente: FuenteMapa): org.osmdroid.tileprovider.tilesource.ITileSource =
+    when (fuente) {
+        FuenteMapa.OSM_STANDARD -> TileSourceFactory.MAPNIK
+        FuenteMapa.ESRI_SATELITE -> XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
+        FuenteMapa.OSM_TOPO -> XYTileSource("OpenTopoMap", 0, 17, 256, ".png", arrayOf("https://a.tile.opentopomap.org/", "https://b.tile.opentopomap.org/", "https://c.tile.opentopomap.org/"))
+        FuenteMapa.OFFLINE -> TileSourceFactory.MAPNIK
+    }
+
 private object EstilosOsmdroid {
     val Superficie  = Color(0xFF181C27)
     val Borde       = Color(0xFF2A3045)

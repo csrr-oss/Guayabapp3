@@ -44,13 +44,13 @@ private object EstilosVisor {
     val Superficie  = Color(0xFF181C27)
     val Superficie2 = Color(0xFF1F2436)
     val Borde       = Color(0xFF2A3045)
-    val Accent      = Color(0xFF87A922) // Verde Guayaba Maduro
+    val Accent      = Color(0xFF87A922) 
     val Accent2     = Color(0xFF0090FF) 
     val Muted       = Color(0xFF6B7A99)
     val Texto       = Color(0xFFE8EAF2)
     val Texto2      = Color(0xFF9AA3BF)
     val Amber       = Color(0xFFF0A500) 
-    val Warn        = Color(0xFFFF6B35)
+    val Warn        = Color(0xFFFF6B35) // Nombre estricto
     val Red         = Color(0xFFD80032) 
     val Purple      = Color(0xFF7C6AF7)
 
@@ -159,6 +159,7 @@ internal fun VisorPdf(mapa: MapaPdfEntity, puntos: List<PuntoConMedia>, puntoSel
                 val sel = puntoSeleccionado?.punto?.id == p.id
                 val radio = if (sel) 13.dp.toPx() else 9.dp.toPx()
                 if (sel) drawCircle(colorBase.copy(0.25f), radio * 1.8f, Offset(sx, sy))
+                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warm a EstilosVisor.Warn
                 if (!p.completo) drawCircle(EstilosVisor.Warn.copy(0.3f), radio * 1.4f, Offset(sx, sy))
                 drawCircle(colorBase, radio, Offset(sx, sy))
                 drawCircle(Color.White, 3.dp.toPx(), Offset(sx, sy))
@@ -239,7 +240,8 @@ private fun TarjetaPunto(pm: PuntoConMedia, seleccionado: Boolean, onClick: () -
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 Text("Alt: %.0f m".format(p.altitud), style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Muted))
                 if (pm.fotos.isNotEmpty()) Text("📷 ${pm.fotos.size}", style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Purple))
-                Text(text = if (p.completo) "✓ Completo" else "Pendiente", style = EstilosVisor.BodyLarge.copy(fontWeight = FontWeight.Bold, color = if (p.completo) EstilosVisor.Accent else EstilosVisor.Warm))
+                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warm a EstilosVisor.Warn
+                Text(text = if (p.completo) "✓ Completo" else "Pendiente", style = EstilosVisor.BodyLarge.copy(fontWeight = FontWeight.Bold, color = if (p.completo) EstilosVisor.Accent else EstilosVisor.Warn))
             }
         }
     }
@@ -248,8 +250,8 @@ private fun TarjetaPunto(pm: PuntoConMedia, seleccionado: Boolean, onClick: () -
 @Composable
 internal fun PanelDetallePunto(puntoConMedia: PuntoConMedia, onGuardar: (String, String) -> Unit, onCambiarTipo: (String) -> Unit, onEliminar: () -> Unit, onAgregarFoto: () -> Unit, onCerrar: () -> Unit) {
     val p = puntoConMedia.punto
-    var descripcion by remember(p.id) { mutableStateOf(p.descripcion) }
-    var tipoSel by remember(p.id) { mutableStateOf(p.tipo) }
+    var descripcion by remember { mutableStateOf(p.descripcion) }
+    var tipoSel by remember { mutableStateOf(p.tipo) }
     var confirmarEliminar by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.width(250.dp).fillMaxHeight(), color = EstilosVisor.Superficie, border = BorderStroke(1.dp, EstilosVisor.Borde)) {

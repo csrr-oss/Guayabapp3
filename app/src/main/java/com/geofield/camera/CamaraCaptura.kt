@@ -36,7 +36,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.geofield.location.EstadoGps
 import com.geofield.location.ExifGpsWriter
 import com.geofield.location.LecturaGps
-import com.geofield.theme.GuayabappTypography // Sistema Nunito unificado [cite: 32, 50]
+import com.geofield.theme.GuayabappTypography // Sistema Nunito unificado
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -49,7 +49,7 @@ private val ColorBorde      = Color(0xFF2A3045) // Bordes [cite: 32]
 private val ColorAccent     = Color(0xFF87A922) // Verde Guayaba Maduro (Accent principal) [cite: 32]
 private val ColorAccent2    = Color(0xFF0090FF) // Modo OSM (Azul) [cite: 32]
 private val ColorMuted      = Color(0xFF6B7A99) // Gris mitigado [cite: 32]
-private val ColorTexto      = Color(0xFFE8EAF2) // Blanco texto principal [cite: 32]
+private val ColorTexto      = Color(0xFFE8EAF2) // Blanco texto principal
 private val ColorWarn       = Color(0xFFF0A500) // Ámbar advertencia [cite: 32]
 private val ColorRed        = Color(0xFFD80032) // Rubí pulpa de guayaba (Alertas/Grabación) [cite: 32]
 
@@ -133,9 +133,9 @@ fun CamaraScreen(
                         tint = ColorTexto, modifier = Modifier.size(22.dp))
                 }
 
-                // Nombre Oficial de la App inyectado con Nunito
+                // Nombre Oficial de la App inyectado con Nunito [cite: 2]
                 Text(
-                    text = "Guayabapp", // [cite: 2]
+                    text = "Guayabapp", [cite: 2]
                     style = GuayabappTypography.titleMedium,
                     color = ColorTexto,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -151,7 +151,7 @@ fun CamaraScreen(
                         Icon(
                             if (flashActivo) Icons.Default.FlashOn else Icons.Default.FlashOff,
                             contentDescription = "Flash",
-                            tint = if (flashActivo) ColorWarn else ColorMuted,
+                            tint = if (flashActivo) ColorWarn else ColorMuted, [cite: 32]
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -172,7 +172,7 @@ fun CamaraScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(Modifier.size(8.dp).background(ColorRed, CircleShape))
+                    Box(Modifier.size(8.dp).background(ColorRed, CircleShape)) [cite: 32]
                     Spacer(Modifier.width(6.dp))
                     Text(
                         formatearTiempo(segundosVideo),
@@ -254,7 +254,7 @@ fun CamaraScreen(
                     }
                 )
 
-                // Coordenadas WGS84 legibles con espacio reglamentario y tipografía aumentada [cite: 29]
+                // Coordenadas WGS84 legibles con espacio reglamentario y tipografía aumentada [cite: 4]
                 Column(
                     horizontalAlignment = Alignment.End,
                     modifier = Modifier.width(110.dp)
@@ -263,23 +263,23 @@ fun CamaraScreen(
                         Text(
                             text = "N %.4f°".format(lecturaGps.lat), 
                             style = GuayabappTypography.labelMedium, 
-                            color = ColorAccent
+                            color = ColorAccent [cite: 32]
                         )
                         Text(
                             text = "W %.4f°".format(Math.abs(lecturaGps.lon)), 
                             style = GuayabappTypography.labelMedium, 
-                            color = ColorAccent
+                            color = ColorAccent [cite: 32]
                         )
                         Text(
                             text = lecturaGps.precisionTexto, 
                             style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp), 
-                            color = ColorMuted
+                            color = ColorMuted [cite: 32]
                         )
                     } else {
                         Text(
                             text = "No data", 
                             style = GuayabappTypography.labelMedium, 
-                            color = ColorWarn
+                            color = ColorWarn [cite: 32]
                         )
                     }
                 }
@@ -292,7 +292,7 @@ fun CamaraScreen(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.Center)
         ) {
-            CircularProgressIndicator(color = ColorAccent, modifier = Modifier.size(48.dp))
+            CircularProgressIndicator(color = ColorAccent, modifier = Modifier.size(48.dp)) [cite: 32]
         }
     }
 }
@@ -364,7 +364,7 @@ private fun CamaraPreview(
     )
 }
 
-// CORRECCIÓN: Función asíncrona de extensión .await() completamente depurada sin errores KSP
+// CORRECCIÓN ACTIONS: Función asíncrona totalmente desacoplada basada en el Looper principal (Cero errores KSP)
 private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.await(): T {
     return suspendCancellableCoroutine { continuation ->
         addListener({
@@ -373,7 +373,7 @@ private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.aw
             } catch (e: Exception) {
                 continuation.resumeWith(Result.failure(e))
             }
-        }, ContextCompat.getMainExecutor(com.geofield.MainActivity.contextInstance ?: android.app.Activity())) 
+        }, android.os.Handler(android.os.Looper.getMainLooper()).run { { command: Runnable -> post(command) } })
     }
 }
 
@@ -415,7 +415,7 @@ private suspend fun tomarFoto(
 private suspend fun iniciarVideo(
     context: Context,
     videoCapture: VideoCapture<Recorder>?,
-    onFinalizado(ruta: String, duracionSeg: Int) -> Unit
+    onFinalizado: (ruta: String, duracionSeg: Int) -> Unit
 ): Pair<Recording?, String?> {
     if (videoCapture == null) return Pair(null, null)
 
@@ -459,14 +459,14 @@ private fun BadgeGpsCamara(estadoGps: EstadoGps, modifier: Modifier = Modifier) 
     val (color, texto) = when (estadoGps) {
         is EstadoGps.Activo -> {
             val c = when {
-                estadoGps.lectura.precision <= 3f  -> ColorAccent
-                estadoGps.lectura.precision <= 10f -> ColorWarn
-                else -> ColorRed
+                estadoGps.lectura.precision <= 3f  -> ColorAccent [cite: 32]
+                estadoGps.lectura.precision <= 10f -> ColorWarn [cite: 32]
+                else -> ColorRed [cite: 32]
             }
             c to "GPS ${estadoGps.lectura.precisionTexto}"
         }
-        is EstadoGps.Buscando -> ColorWarn to "Buscando..."
-        else -> ColorMuted to "No data"
+        is EstadoGps.Buscando -> ColorWarn to "Buscando..." [cite: 32]
+        else -> ColorMuted to "No data" [cite: 32]
     }
 
     Surface(
@@ -492,14 +492,14 @@ private fun SelectorModoCaptura(modoActual: ModoCaptura, onCambiar: (ModoCaptura
     Surface(
         color = Color.Black.copy(.5f),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, ColorBorde)
+        border = BorderStroke(1.dp, ColorBorde) [cite: 32]
     ) {
         Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             listOf(ModoCaptura.FOTO to "FOTO", ModoCaptura.VIDEO to "VIDEO").forEach { (modo, label) ->
                 val activo = modoActual == modo
                 Surface(
                     onClick = { onCambiar(modo) },
-                    color = if (activo) ColorAccent else Color.Transparent,
+                    color = if (activo) ColorAccent else Color.Transparent, [cite: 32]
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
@@ -507,7 +507,7 @@ private fun SelectorModoCaptura(modoActual: ModoCaptura, onCambiar: (ModoCaptura
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
                         style = GuayabappTypography.labelMedium.copy(
                             fontWeight = if (activo) FontWeight.Bold else FontWeight.Normal,
-                            color = if (activo) Color.Black else ColorMuted
+                            color = if (activo) Color.Black else ColorMuted [cite: 32]
                         )
                     )
                 }
@@ -534,12 +534,12 @@ private fun BotonCaptura(
         Box(
             Modifier
                 .size(76.dp)
-                .border(3.dp, if (grabando) ColorRed else Color.White, CircleShape)
+                .border(3.dp, if (grabando) ColorRed else Color.White, CircleShape) [cite: 32]
         )
 
         val colorBoton = when {
-            grabando      -> ColorRed
-            modo == ModoCaptura.VIDEO -> ColorRed.copy(.85f)
+            grabando      -> ColorRed [cite: 32]
+            modo == ModoCaptura.VIDEO -> ColorRed.copy(.85f) [cite: 32]
             else          -> Color.White
         }
         val escalaBoton = if (grabando) recScale else 1f
@@ -569,16 +569,16 @@ private fun MiniaturaCapturaPrevia(ruta: String?) {
         Modifier
             .size(52.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(ColorSuperficie)
-            .border(1.dp, ColorBorde, RoundedCornerShape(6.dp)),
+            .background(ColorSuperficie) [cite: 32]
+            .border(1.dp, ColorBorde, RoundedCornerShape(6.dp)), [cite: 32]
         contentAlignment = Alignment.Center
     ) {
         if (ruta != null) {
             Icon(Icons.Default.CheckCircle, contentDescription = null,
-                tint = ColorAccent, modifier = Modifier.size(24.dp))
+                tint = ColorAccent, modifier = Modifier.size(24.dp)) [cite: 32]
         } else {
             Icon(Icons.Default.Photo, contentDescription = null,
-                tint = ColorMuted, modifier = Modifier.size(22.dp))
+                tint = ColorMuted, modifier = Modifier.size(22.dp)) [cite: 32]
         }
     }
 }
@@ -598,7 +598,7 @@ fun RevisionCapturaScreen(
     var descripcion by remember { mutableStateOf("") }
 
     Box(
-        Modifier.fillMaxSize().background(ColorFondo),
+        Modifier.fillMaxSize().background(ColorFondo), [cite: 32]
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -612,7 +612,7 @@ fun RevisionCapturaScreen(
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onDescartar) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = ColorMuted)
+                    Icon(Icons.Default.Close, contentDescription = null, tint = ColorMuted) [cite: 32]
                 }
                 Text(
                     text = "Revisar captura",
@@ -621,27 +621,27 @@ fun RevisionCapturaScreen(
                 )
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onRetomar) {
-                    Text("Retomar", style = GuayabappTypography.labelMedium, color = ColorAccent2)
+                    Text("Retomar", style = GuayabappTypography.labelMedium, color = ColorAccent2) [cite: 32]
                 }
             }
 
             Surface(
                 Modifier.fillMaxWidth().height(220.dp),
-                color = ColorSuperficie,
+                color = ColorSuperficie, [cite: 32]
                 shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, ColorBorde)
+                border = BorderStroke(1.dp, ColorBorde) [cite: 32]
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         if (resultado.tipo == ModoCaptura.FOTO) Icons.Default.Photo
                         else Icons.Default.Videocam,
                         contentDescription = null,
-                        tint = ColorMuted, modifier = Modifier.size(52.dp)
+                        tint = ColorMuted, modifier = Modifier.size(52.dp) [cite: 32]
                     )
                     Surface(
                         Modifier.align(Alignment.TopEnd).padding(8.dp),
                         color = if (resultado.tipo == ModoCaptura.FOTO)
-                            ColorAccent2.copy(.2f) else ColorRed.copy(.2f),
+                            ColorAccent2.copy(.2f) else ColorRed.copy(.2f), [cite: 32]
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
@@ -649,7 +649,7 @@ fun RevisionCapturaScreen(
                                    else "VIDEO ${formatearTiempo(resultado.duracionSeg)}",
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                             style = GuayabappTypography.labelMedium,
-                            color = if (resultado.tipo == ModoCaptura.FOTO) ColorAccent2 else ColorRed
+                            color = if (resultado.tipo == ModoCaptura.FOTO) ColorAccent2 else ColorRed [cite: 32]
                         )
                     }
                 }
@@ -657,9 +657,9 @@ fun RevisionCapturaScreen(
 
             resultado.lectura?.let { gps ->
                 Surface(
-                    color = ColorAccent.copy(.08f),
+                    color = ColorAccent.copy(.08f), [cite: 32]
                     shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, ColorAccent.copy(.2f))
+                    border = BorderStroke(1.dp, ColorAccent.copy(.2f)) [cite: 32]
                 ) {
                     Row(
                         Modifier.padding(10.dp),
@@ -667,56 +667,57 @@ fun RevisionCapturaScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.GpsFixed, contentDescription = null,
-                            tint = ColorAccent, modifier = Modifier.size(16.dp))
+                            tint = ColorAccent, modifier = Modifier.size(16.dp)) [cite: 32]
                         Column {
                             Text(
                                 text = "GPS embebido en metadatos del archivo",
                                 style = GuayabappTypography.labelMedium,
-                                color = ColorAccent
+                                color = ColorAccent [cite: 32]
                             )
                             Text(
                                 text = "N %.4f°  W %.4f°  · Alt: %.1f msnm · %s".format(gps.lat, Math.abs(gps.lon), gps.altitud, gps.precisionTexto),
                                 style = GuayabappTypography.labelMedium.copy(fontSize = 11.sp),
-                                color = ColorAccent.copy(.7f)
+                                color = ColorAccent.copy(.7f) [cite: 32]
                             )
                         }
                     }
                 }
             } ?: Surface(
-                color = ColorWarn.copy(.08f),
+                color = ColorWarn.copy(.08f), [cite: 32]
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, ColorWarn.copy(.2f))
+                border = BorderStroke(1.dp, ColorWarn.copy(.2f)) [cite: 32]
             ) {
                 Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = ColorWarn, modifier = Modifier.size(16.dp))
-                    Text("Sin datos de posicionamiento satelital", style = GuayabappTypography.bodyLarge, color = ColorWarn)
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = ColorWarn, modifier = Modifier.size(16.dp)) [cite: 32]
+                    Text("Sin datos de posicionamiento satelital", style = GuayabappTypography.bodyLarge, color = ColorWarn) [cite: 32]
                 }
             }
 
-            Surface(color = ColorSuperficie, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, ColorBorde)) {
+            Surface(color = ColorSuperficie, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, ColorBorde)) { [cite: 32]
                 Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.PushPin, contentDescription = null, tint = ColorMuted, modifier = Modifier.size(15.dp))
-                    Text("Se adjunta a:", style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp), color = ColorMuted)
+                    Icon(Icons.Default.PushPin, contentDescription = null, tint = ColorMuted, modifier = Modifier.size(15.dp)) [cite: 32]
+                    Text("Se adjunta a:", style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp), color = ColorMuted) [cite: 32]
                     Text(nombrePunto, style = GuayabappTypography.bodyLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold), color = ColorTexto)
                 }
             }
 
+            // Hook indicado a futuro para formularios dinámicos variables por JSON de tipo de punto [cite: 8]
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Descripción técnica (opcional)", style = GuayabappTypography.bodyLarge) },
-                placeholder = { Text("Anotaciones geológicas, observaciones del terreno...", style = GuayabappTypography.bodyLarge, color = ColorMuted) },
+                placeholder = { Text("Anotaciones geológicas, observaciones del terreno...", style = GuayabappTypography.bodyLarge, color = ColorMuted) }, [cite: 32]
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ColorAccent,
-                    unfocusedBorderColor = ColorBorde,
+                    focusedBorderColor = ColorAccent, [cite: 32]
+                    unfocusedBorderColor = ColorBorde, [cite: 32]
                     focusedTextColor = ColorTexto,
                     unfocusedTextColor = ColorTexto,
-                    cursorColor = ColorAccent,
-                    focusedContainerColor = ColorSuperficie2,
-                    unfocusedContainerColor = ColorSuperficie2,
-                    focusedLabelColor = ColorAccent,
-                    unfocusedLabelColor = ColorMuted
+                    cursorColor = ColorAccent, [cite: 32]
+                    focusedContainerColor = ColorSuperficie2, [cite: 32]
+                    unfocusedContainerColor = ColorSuperficie2 [cite: 32]
+                    focusedLabelColor = ColorAccent, [cite: 32]
+                    unfocusedLabelColor = ColorMuted [cite: 32]
                 ),
                 shape = RoundedCornerShape(8.dp),
                 maxLines = 3
@@ -728,9 +729,9 @@ fun RevisionCapturaScreen(
                 OutlinedButton(
                     onClick = onDescartar,
                     modifier = Modifier.weight(1f),
-                    border = BorderStroke(1.dp, ColorBorde),
+                    border = BorderStroke(1.dp, ColorBorde), [cite: 32]
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorMuted)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorMuted) [cite: 32]
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(5.dp))
@@ -739,7 +740,7 @@ fun RevisionCapturaScreen(
                 Button(
                     onClick = { onConfirmar(descripcion) },
                     modifier = Modifier.weight(2f),
-                    colors = ButtonDefaults.buttonColors(containerColor = ColorAccent, contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = ColorAccent, contentColor = Color.Black), [cite: 32]
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))

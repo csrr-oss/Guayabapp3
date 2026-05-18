@@ -159,7 +159,7 @@ internal fun VisorPdf(mapa: MapaPdfEntity, puntos: List<PuntoConMedia>, puntoSel
                 val sel = puntoSeleccionado?.punto?.id == p.id
                 val radio = if (sel) 13.dp.toPx() else 9.dp.toPx()
                 if (sel) drawCircle(colorBase.copy(0.25f), radio * 1.8f, Offset(sx, sy))
-                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warm a EstilosVisor.Warn
+                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warn a EstilosVisor.Warn
                 if (!p.completo) drawCircle(EstilosVisor.Warn.copy(0.3f), radio * 1.4f, Offset(sx, sy))
                 drawCircle(colorBase, radio, Offset(sx, sy))
                 drawCircle(Color.White, 3.dp.toPx(), Offset(sx, sy))
@@ -207,7 +207,7 @@ internal fun SidebarPuntos(puntos: List<PuntoConMedia>, puntoSeleccionado: Punto
     Surface(modifier = Modifier.width(230.dp).fillMaxHeight(), color = EstilosVisor.Superficie) {
         Column {
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf(Triple("${puntos.size}", "Puntos", EstilosVisor.Accent), Triple("${puntos.sumOf { it.fotos.size }}", "Fotos", EstilosVisor.Purple), Triple("${puntos.count { !it.punto.completo }}", "Pend.", EstilosVisor.Warm)).forEach { (num, lbl, color) ->
+                listOf(Triple("${puntos.size}", "Puntos", EstilosVisor.Accent), Triple("${puntos.sumOf { it.fotos.size }}", "Fotos", EstilosVisor.Purple), Triple("${puntos.count { !it.punto.completo }}", "Pend.", EstilosVisor.Warn)).forEach { (num, lbl, color) ->
                     Surface(Modifier.weight(1f), color = EstilosVisor.Superficie2, shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, EstilosVisor.Borde)) { Column(Modifier.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(num, style = EstilosVisor.TitleMedium.copy(color = color)); Text(lbl, style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Muted)) } }
                 }
             }
@@ -240,7 +240,7 @@ private fun TarjetaPunto(pm: PuntoConMedia, seleccionado: Boolean, onClick: () -
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 Text("Alt: %.0f m".format(p.altitud), style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Muted))
                 if (pm.fotos.isNotEmpty()) Text("📷 ${pm.fotos.size}", style = EstilosVisor.BodyLarge.copy(color = EstilosVisor.Purple))
-                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warm a EstilosVisor.Warn
+                // CORRECCIÓN SINTAXIS: Cambiado EstilosVisor.Warn a EstilosVisor.Warn
                 Text(text = if (p.completo) "✓ Completo" else "Pendiente", style = EstilosVisor.BodyLarge.copy(fontWeight = FontWeight.Bold, color = if (p.completo) EstilosVisor.Accent else EstilosVisor.Warn))
             }
         }

@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,7 +36,6 @@ private val ColorTexto       = Color(0xFFE8EAF2)
 private val ColorTexto2      = Color(0xFF9AA3BF)
 private val ColorAmber       = Color(0xFFF0A500) 
 private val ColorPurple      = Color(0xFF7C6AF7) 
-private val ColorRed         = Color(0xFFD80032)
 
 private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
 private val LocalTitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -69,7 +69,7 @@ fun PantallaPermisos(onSolicitarPermisos: () -> Unit) {
         Column(Modifier.widthIn(max = 380.dp).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(22.dp)) {
             Icon(Icons.Default.GpsFixed, null, tint = ColorAccent, modifier = Modifier.size(56.dp))
             Text(text = "Permisos de Operación", style = LocalTitleMedium, color = ColorTexto)
-            Text(text = "Guayabapp requires acceso a los sensores de hardware para capturar coordenadas satelitales y registrar evidencias multimedia en zonas offline.", style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
+            Text(text = "Guayabapp requiere acceso a los sensores de hardware para capturar coordenadas satelitales y registrar evidencias multimedia en zonas offline.", style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ItemPermiso(Icons.Default.GpsFixed, ColorAccent, "Ubicación Satelital Precisa", "Captura de coordenadas universales WGS84.")
@@ -129,7 +129,7 @@ fun ProyectosScreen(onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit
 private fun TarjetaProyecto(proyecto: ProyectoResumen, onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     
-    // CORRECCIÓN SINTAXIS EXPLICITA: Se corrigió el formateo multilínea de asignación para que compile de forma limpia
+    // CORRECCIÓN ACTIONS: Sentencias desglosadas en bloque limpio multilínea (Adiós errores de KSP)
     val colorModo = when (proyecto.modoCapa) { 
         ModoCapaBase.GEO_PDF -> ColorAmber 
         ModoCapaBase.OSM_ESTANDAR -> ColorAccent2 

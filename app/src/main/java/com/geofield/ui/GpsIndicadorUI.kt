@@ -22,30 +22,31 @@ import androidx.compose.ui.unit.sp
 import com.geofield.location.EstadoGps
 import com.geofield.location.LecturaGps
 
-// ─── PALETA GUAYABAPP ────────────────────────────────────────────────────────
-private val ColorFondo       = Color(0xFF0F1117)
-private val ColorSuperficie  = Color(0xFF181C27)
-private val ColorSuperficie2 = Color(0xFF1F2436)
-private val ColorBorde       = Color(0xFF2A3045)
-private val ColorAccent      = Color(0xFF87A922) // Verde Guayaba Maduro
-private val ColorBueno       = Color(0xFF4CAF50) 
-private val ColorWarn        = Color(0xFFF0A500) 
-private val ColorMalo        = Color(0xFFD80032) // Rubí Pulpa
-private val ColorMuted       = Color(0xFF6B7A99) 
-private val ColorTexto       = Color(0xFFE8EAF2)
-private val ColorTexto2      = Color(0xFF9AA3BF)
+// ─── CONFIGURACIÓN LOCAL DE ESTILOS UNIFICADOS GUAYABAPP ─────────────────────
+private object EstilosGuayaba {
+    val Fondo       = Color(0xFF0F1117)
+    val Superficie  = Color(0xFF181C27)
+    val Superficie2 = Color(0xFF1F2436)
+    val Borde       = Color(0xFF2A3045)
+    val Accent      = Color(0xFF87A922) // Verde Guayaba Maduro
+    val Bueno       = Color(0xFF4CAF50)
+    val Warn        = Color(0xFFF0A500)
+    val Malo        = Color(0xFFD80032) // Rubí Pulpa
+    val Muted       = Color(0xFF6B7A99)
+    val Texto       = Color(0xFFE8EAF2)
+    val Texto2      = Color(0xFF9AA3BF)
 
-// Estilos tipográficos locales para evitar errores de importación cruzada
-private val LocalLabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 0.5.sp)
-private val LocalTitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-private val LocalTitleLarge  = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 22.sp)
-private val LocalBodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 15.sp)
+    val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+    val TitleMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    val TitleLarge  = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 24.sp)
+    val BodyLarge   = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Normal, fontSize = 14.sp)
+}
 
 private fun colorPorPrecision(precision: Float) = when {
-    precision <= 3f  -> ColorAccent
-    precision <= 5f  -> ColorBueno
-    precision <= 10f -> ColorWarn
-    else             -> ColorMalo
+    precision <= 3f  -> EstilosGuayaba.Accent
+    precision <= 5f  -> EstilosGuayaba.Bueno
+    precision <= 10f -> EstilosGuayaba.Warn
+    else             -> EstilosGuayaba.Malo
 }
 
 @Composable
@@ -59,10 +60,10 @@ fun GpsBadgeTopBar(estado: EstadoGps) {
 
     val (dotColor, texto) = when (estado) {
         is EstadoGps.Activo -> colorPorPrecision(estado.lectura.precision) to estado.lectura.precisionTexto
-        is EstadoGps.Buscando -> ColorWarn to "Buscando..."
-        is EstadoGps.PermisosDenegados -> ColorMalo to "No data"
-        is EstadoGps.Error -> ColorMalo to "Error GPS"
-        else -> ColorMuted to "No data"
+        is EstadoGps.Buscando -> EstilosGuayaba.Warn to "Buscando..."
+        is EstadoGps.PermisosDenegados -> EstilosGuayaba.Malo to "No data"
+        is EstadoGps.Error -> EstilosGuayaba.Malo to "Error GPS"
+        else -> EstilosGuayaba.Muted to "No data"
     }
 
     Surface(
@@ -77,7 +78,7 @@ fun GpsBadgeTopBar(estado: EstadoGps) {
         ) {
             val pulseAlpha = if (estado is EstadoGps.Buscando) alpha else 1f
             Box(Modifier.size(7.dp).background(dotColor.copy(alpha = pulseAlpha), CircleShape))
-            Text(text = texto, style = LocalLabelMedium, color = dotColor)
+            Text(text = texto, style = EstilosGuayaba.LabelMedium, color = dotColor)
         }
     }
 }
@@ -86,23 +87,23 @@ fun GpsBadgeTopBar(estado: EstadoGps) {
 fun PanelGpsDetalle(estado: EstadoGps, onCerrar: () -> Unit) {
     Surface(
         modifier = Modifier.width(260.dp),
-        color = ColorSuperficie,
+        color = EstilosGuayaba.Superficie,
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, ColorBorde),
+        border = BorderStroke(1.dp, EstilosGuayaba.Borde),
         shadowElevation = 8.dp
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.GpsFixed, contentDescription = null, tint = ColorAccent, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.GpsFixed, contentDescription = null, tint = EstilosGuayaba.Accent, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(text = "Estado GPS", style = LocalTitleMedium, color = ColorTexto)
+                Text(text = "Estado GPS", style = EstilosGuayaba.TitleMedium, color = EstilosGuayaba.Texto)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onCerrar, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = null, tint = ColorMuted, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Close, contentDescription = null, tint = EstilosGuayaba.Muted, modifier = Modifier.size(14.dp))
                 }
             }
 
-            HorizontalDivider(color = ColorBorde, thickness = 0.5.dp)
+            HorizontalDivider(color = EstilosGuayaba.Borde, thickness = 0.5.dp)
 
             when (estado) {
                 is EstadoGps.Activo -> DetalleGpsActivo(estado.lectura)
@@ -129,17 +130,17 @@ private fun DetalleGpsActivo(lectura: LecturaGps) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(text = "Precisión horizontal", style = LocalLabelMedium.copy(color = ColorMuted))
-                Text(text = lectura.precisionTexto, style = LocalTitleLarge.copy(color = color))
-                Text(text = calidad, style = LocalBodyLarge.copy(fontWeight = FontWeight.Medium, color = color))
+                Text(text = "Precisión horizontal", style = EstilosGuayaba.LabelMedium.copy(color = EstilosGuayaba.Muted))
+                Text(text = lectura.precisionTexto, style = EstilosGuayaba.TitleLarge.copy(color = color))
+                Text(text = calidad, style = EstilosGuayaba.BodyLarge.copy(fontWeight = FontWeight.Medium, color = color))
             }
             Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(progress = { porcentaje }, modifier = Modifier.size(48.dp), color = color, trackColor = ColorBorde, strokeWidth = 3.dp)
-                Text(text = "${lectura.precision.toInt()}m", style = LocalLabelMedium.copy(color = color))
+                CircularProgressIndicator(progress = { porcentaje }, modifier = Modifier.size(48.dp), color = color, trackColor = EstilosGuayaba.Borde, strokeWidth = 3.dp)
+                Text(text = "${lectura.precision.toInt()}m", style = EstilosGuayaba.LabelMedium.copy(color = color))
             }
         }
 
-        HorizontalDivider(color = ColorBorde, thickness = 0.5.dp)
+        HorizontalDivider(color = EstilosGuayaba.Borde, thickness = 0.5.dp)
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FilaDatoGps("Latitud", "%.6f°".format(lectura.lat))
@@ -158,25 +159,25 @@ private fun DetalleGpsActivo(lectura: LecturaGps) {
 @Composable
 private fun DetalleGpsBuscando() {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Icon(Icons.Default.GpsNotFixed, contentDescription = null, tint = ColorWarn, modifier = Modifier.size(32.dp))
-        Text(text = "Buscando señal GPS...", style = LocalBodyLarge.copy(fontWeight = FontWeight.Medium), color = ColorWarn)
-        Text(text = "Ubícate en un espacio abierto", style = LocalBodyLarge.copy(color = ColorMuted), color = ColorMuted)
+        Icon(Icons.Default.GpsNotFixed, contentDescription = null, tint = EstilosGuayaba.Warn, modifier = Modifier.size(32.dp))
+        Text(text = "Buscando señal GPS...", style = EstilosGuayaba.BodyLarge.copy(fontWeight = FontWeight.Medium), color = EstilosGuayaba.Warn)
+        Text(text = "Ubícate en un espacio abierto", style = EstilosGuayaba.BodyLarge.copy(color = EstilosGuayaba.Muted))
     }
 }
 
 @Composable
 private fun DetalleGpsError(mensaje: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Icon(Icons.Default.GpsOff, contentDescription = null, tint = ColorMalo, modifier = Modifier.size(30.dp))
-        Text(text = mensaje, style = LocalBodyLarge, color = ColorTexto2, textAlign = TextAlign.Center)
+        Icon(Icons.Default.GpsOff, contentDescription = null, tint = EstilosGuayaba.Malo, modifier = Modifier.size(30.dp))
+        Text(text = mensaje, style = EstilosGuayaba.BodyLarge, color = EstilosGuayaba.Texto2, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun FilaDatoGps(label: String, valor: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(text = label, style = LocalBodyLarge, color = ColorMuted)
-        Text(text = valor, style = LocalLabelMedium, color = ColorTexto)
+        Text(text = label, style = EstilosGuayaba.BodyLarge, color = EstilosGuayaba.Muted)
+        Text(text = valor, style = EstilosGuayaba.LabelMedium, color = EstilosGuayaba.Texto)
     }
 }
 
@@ -187,16 +188,16 @@ fun IndicadorGpsCaptura(estado: EstadoGps, modifier: Modifier = Modifier) {
             val c = colorPorPrecision(estado.lectura.precision)
             quintuple(c.copy(.1f), c.copy(.3f), Icons.Default.GpsFixed, estado.lectura.coordenadasFormateadas, "Alt: %.1f msnm  ·  %s".format(estado.lectura.altitud, estado.lectura.precisionTexto))
         }
-        is EstadoGps.Buscando -> quintuple(ColorWarn.copy(.1f), ColorWarn.copy(.3f), Icons.Default.GpsNotFixed, "Buscando señal GPS...", "Calculando posición satelital")
-        else -> quintuple(ColorMuted.copy(.1f), ColorBorde, Icons.Default.GpsOff, "No data", "Verifica la configuración del dispositivo")
+        is EstadoGps.Buscando -> quintuple(EstilosGuayaba.Warn.copy(.1f), EstilosGuayaba.Warn.copy(.3f), Icons.Default.GpsNotFixed, "Buscando señal GPS...", "Calculando posición satelital")
+        else -> quintuple(EstilosGuayaba.Muted.copy(.1f), EstilosGuayaba.Borde, Icons.Default.GpsOff, "No data", "Verifica la configuración del dispositivo")
     }
 
     Surface(modifier = modifier.fillMaxWidth(), color = bgColor, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, borderColor)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(icono, contentDescription = null, tint = borderColor, modifier = Modifier.size(20.dp))
             Column {
-                Text(text = texto, style = LocalLabelMedium, color = ColorTexto)
-                Text(text = subtexto, style = LocalBodyLarge, color = ColorMuted)
+                Text(text = texto, style = EstilosGuayaba.LabelMedium, color = EstilosGuayaba.Texto)
+                Text(text = subtexto, style = EstilosGuayaba.BodyLarge, color = EstilosGuayaba.Muted)
             }
         }
     }

@@ -14,7 +14,7 @@ object GeoPdfTransform {
 
     /**
      * Convierte coordenadas GPS (WGS84) a píxeles dentro del PDF.
-     * Si el PDF usa otra proyección (ej: MAGNA-SIRGAS / CTM12),
+     * Si el PDF usa otra proyeccion (ej: MAGNA-SIRGAS / CTM12),
      * se debe reproyectar primero con proj4j antes de llamar esto.
      */
     fun gpsAPixel(lat: Double, lon: Double, mapa: MapaPdfEntity): PointF {
@@ -52,7 +52,7 @@ object GeoPdfTransform {
     )
 }
 
-// ─── EXPORTADOR KML ───────────────────────────────────────────────────────────
+// ─── EXPORTADOR KML MODIFICADO (IDENTIDAD + METADATOS COMPLETO) ───────────────
 
 object KmlExporter {
 
@@ -63,7 +63,6 @@ object KmlExporter {
 
     /**
      * Genera el archivo KML con todos los puntos seleccionados.
-     * Lo guarda en cache del app para compartir vía FileProvider.
      */
     fun exportar(
         context: Context,
@@ -78,9 +77,9 @@ object KmlExporter {
 
         outputFile.bufferedWriter(Charsets.UTF_8).use { writer ->
             writer.write(kmlHeader(proyectoNombre))
-            writer.write(estilosPorTipo())
+            writer.write(estilosDinamicosPorPuntos(puntos)) // CORRECCIÓN: Estilos dinámicos expansibles
 
-            // Carpetas por tipo para mejor organización en Google Earth
+            // Carpetas por tipo para organización en Google Earth
             val tiposPresentes = puntos.map { it.punto.tipo }.distinct()
             tiposPresentes.forEach { tipo ->
                 val puntosDeTipo = puntos.filter { it.punto.tipo == tipo }
@@ -102,7 +101,6 @@ object KmlExporter {
         return outputFile
     }
 
-    /** Genera el KML como String para vista previa en la app */
     fun previsualizarKml(
         proyectoNombre: String,
         puntos: List<PuntoConMedia>,
@@ -111,15 +109,16 @@ object KmlExporter {
         val muestra = puntos.take(maxPuntos)
         val sb = StringBuilder()
         sb.append(kmlHeader(proyectoNombre))
+        sb.append(estilosDinamicosPorPuntos(puntos))
         muestra.forEach { sb.append(placemarkDePunto(it, incluirFotos = false)) }
         if (puntos.size > maxPuntos) {
-            sb.append("  <!-- ... ${puntos.size - maxPuntos} puntos más -->\n")
+            sb.append("  \n")
         }
         sb.append(kmlFooter())
         return sb.toString()
     }
 
-    // ── Bloques KML ──────────────────────────────────────────────────────────
+    // ── Bloques KML con Inyección de Marca Oficial ───────────────────────────
 
     private fun kmlHeader(proyectoNombre: String) = """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -127,31 +126,38 @@ object KmlExporter {
              xmlns:gx="http://www.google.com/kml/ext/2.2">
           <Document>
             <name>$proyectoNombre</name>
-            <description>Exportado desde GeoField · ${dateFormat.format(Date())}</description>
+            <description>Exportado desde Guayabapp · ${dateFormat.format(Date())}</description>
 
     """.trimIndent() + "\n"
 
-    private fun estilosPorTipo(): String {
-        val tipos = mapOf(
-            "visual"     to "00D084",
-            "muestra"    to "7C6AF7",
-            "estructura" to "F0A500",
-            "otro"       to "6B7A99"
-        )
+    /**
+     * CORRECCIÓN: Genera los estilos KML de forma dinámica extrayendo el colorHex real de los puntos.
+     * Esto permite que las nuevas etiquetas del botón (+) se pinten con su color correspondiente en el SIG.
+     */
+    private fun estilosDinamicosPorPuntos(puntos: List<PuntoConMedia>): String {
+        val tiposMapeados = puntos.map { it.punto.tipo to it.punto.colorHex }.distinctBy { it.first }
+        
         return buildString {
-            tipos.forEach { (tipo, colorHex) ->
-                // KML usa formato AABBGGRR (invertido de RGB)
-                val kmlColor = "ff${colorHex.takeLast(2)}${colorHex.substring(2,4)}${colorHex.substring(0,2)}".lowercase()
+            tiposMapeados.forEach { (tipo, colorHex) ->
+                // Limpiamos el # por si viene formateado de Compose
+                val hexLimpio = colorHex.replace("#", "")
+                // KML usa formato AABBGGRR (invertido de RGB tradicional)
+                val kmlColor = if (hexLimpio.length == 6) {
+                    "ff${hexLimpio.takeLast(2)}${hexLimpio.substring(2, 4)}${hexLimpio.substring(0, 2)}".lowercase()
+                } else {
+                    "ff00d084" // Fallback verde guayaba seguro
+                }
+                
                 append("""
                   <Style id="estilo_$tipo">
                     <IconStyle>
                       <color>$kmlColor</color>
-                      <scale>1.0</scale>
-                      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon>
+                      <scale>1.1</scale>
+                      <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
                     </IconStyle>
-                    <LabelStyle><scale>0.8</scale></LabelStyle>
+                    <LabelStyle><scale>0.9</scale></LabelStyle>
                     <BalloonStyle>
-                      <text><![CDATA[<b>${'$'}[name]</b><br/>${'$'}[description]]]></text>
+                      <text><![CDATA[<b>$[name]</b><br/>$[description]]]></text>
                     </BalloonStyle>
                   </Style>
 
@@ -165,6 +171,9 @@ object KmlExporter {
         val timestamp = dateFormat.format(Date(p.timestamp))
         val descripcionHtml = buildDescripcionHtml(puntoCM, incluirFotos)
 
+        // CORRECCIÓN: Si el GPS marca altitud 0, evitamos enterrar el marcador en relieves de alta montaña (Andes)
+        val modoAltitud = if (p.altitud == 0.0) "clampToGround" else "absolute"
+
         return buildString {
             append("  <Placemark>\n")
             append("    <name>${escaparXml(p.nombre)}</name>\n")
@@ -172,7 +181,7 @@ object KmlExporter {
             append("    <styleUrl>#estilo_${p.tipo}</styleUrl>\n")
             append("    <TimeStamp><when>$timestamp</when></TimeStamp>\n")
 
-            // Metadatos extendidos (visibles en Google Earth)
+            // Metadatos extendidos para tablas internas SIG
             append("    <ExtendedData>\n")
             append("      <Data name=\"tipo\"><value>${p.tipo}</value></Data>\n")
             append("      <Data name=\"precision_m\"><value>${p.precision}</value></Data>\n")
@@ -182,9 +191,9 @@ object KmlExporter {
             }
             append("    </ExtendedData>\n")
 
-            // Coordenadas: KML usa lon,lat,alt
+            // Coordenadas estructuradas en el estándar KML (lon, lat, alt)
             append("    <Point>\n")
-            append("      <altitudeMode>absolute</altitudeMode>\n")
+            append("      <altitudeMode>$modoAltitud</altitudeMode>\n")
             append("      <coordinates>${p.lon},${p.lat},${p.altitud}</coordinates>\n")
             append("    </Point>\n")
             append("  </Placemark>\n")
@@ -194,18 +203,20 @@ object KmlExporter {
     private fun buildDescripcionHtml(puntoCM: PuntoConMedia, incluirFotos: Boolean): String {
         val p = puntoCM.punto
         return buildString {
-            append("<table style='font-family:sans-serif;font-size:12px'>")
-            append("<tr><td><b>Tipo</b></td><td>${p.tipo}</td></tr>")
-            append("<tr><td><b>Lat</b></td><td>${p.lat}</td></tr>")
-            append("<tr><td><b>Lon</b></td><td>${p.lon}</td></tr>")
-            append("<tr><td><b>Altitud</b></td><td>${p.altitud} m</td></tr>")
-            append("<tr><td><b>Precisión</b></td><td>±${p.precision} m</td></tr>")
+            append("<table style='font-family:sans-serif;font-size:13px;border-collapse:collapse;' border='1' cellpadding='5'>")
+            append("<tr style='background-color:#0f1117;color:#e8eaf2;'><th colspan='2'>Datos de Campo — Guayabapp</th></tr>")
+            append("<tr><td><b>Tipo de Registro</b></td><td>${p.tipo.replaceFirstChar { it.uppercase() }}</td></tr>")
+            append("<tr><td><b>Latitud (WGS84)</b></td><td>${p.lat}</td></tr>")
+            append("<tr><td><b>Longitud (WGS84)</b></td><td>${p.lon}</td></tr>")
+            append("<tr><td><b>Altitud</b></td><td>${if (p.altitud == 0.0) "Calculada por terreno" else "${p.altitud} msnm"}</td></tr>")
+            append("<tr><td><b>Margen de Precisión</b></td><td>± ${p.precision} m</td></tr>")
+            
             if (p.descripcion.isNotBlank()) {
-                append("<tr><td colspan='2'>${p.descripcion}</td></tr>")
+                append("<tr><td colspan='2'><b>Observaciones Técnicas:</b><br/>${p.descripcion}</td></tr>")
             }
             if (incluirFotos && puntoCM.fotos.isNotEmpty()) {
                 puntoCM.fotos.forEach { foto ->
-                    append("<tr><td colspan='2'><img src='${foto.rutaArchivo}' width='200'/></td></tr>")
+                    append("<tr><td colspan='2' align='center'><img src='file://${foto.rutaArchivo}' width='250' style='border-radius:4px;'/></td></tr>")
                 }
             }
             append("</table>")
@@ -219,4 +230,5 @@ object KmlExporter {
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace("\"", "&quot;")
+        .replace("'", "&apos;")
 }

@@ -9,9 +9,20 @@ import androidx.navigation.compose.*
 import com.geofield.ui.*
 import com.geofield.data.GeoFieldDatabase
 
+// ─── EXTENSIÓN CENTRAL DE CAPAS CARTOGRÁFICAS (UNIFICADA AQUÍ) ───────────────
+enum class ModoCapaBase { OSM_ESTANDAR, ESRI_SATELITE, GEO_PDF }
+
+// ─── ENRUTADOR DE COORDENADAS E IDENTIDAD DE MARCA ───────────────────────────
+sealed class Ruta(val path: String) {
+    object Splash        : Ruta("splash")
+    object Proyectos     : Ruta("proyectos")
+    object NuevoProyecto : Ruta("nuevo_proyecto")
+    object Visor         : Ruta("visor/{proyectoId}") { fun conId(id: Long) = "visor/$id" }
+    object Offline       : Ruta("offline")
+}
+
 @Composable
 fun GuayabappNavGraph(navController: NavHostController) {
-    // Lista mutable reactiva de persistencia a nivel de ciclo de vida de la App (Evita que los proyectos se borren)
     val proyectosGlobales = remember { mutableStateListOf<ProyectoResumen>() }
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -21,16 +32,22 @@ fun GuayabappNavGraph(navController: NavHostController) {
             SplashScreen(onListo = {
                 val repo = com.geofield.location.LocationRepository(context)
                 if (repo.tienePermisos()) {
-                    navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.Splash.path) { inclusive = true } }
+                    navController.navigate(Ruta.Proyectos.path) {
+                        popUpTo(Ruta.Splash.path) { inclusive = true }
+                    }
                 } else {
-                    navController.navigate(Ruta.Offline.path) { popUpTo(Ruta.Splash.path) { inclusive = true } }
+                    navController.navigate(Ruta.Offline.path) {
+                        popUpTo(Ruta.Splash.path) { inclusive = true }
+                    }
                 }
             })
         }
 
         composable(Ruta.Offline.path) {
             PantallaPermisos(onPermisosConcedidos = {
-                navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.Offline.path) { inclusive = true } }
+                navController.navigate(Ruta.Proyectos.path) {
+                    popUpTo(Ruta.Offline.path) { inclusive = true }
+                }
             })
         }
 
@@ -47,7 +64,9 @@ fun GuayabappNavGraph(navController: NavHostController) {
                 onCrear = { nombre, modo ->
                     val nuevoId = (proyectosGlobales.size + 1).toLong()
                     proyectosGlobales.add(ProyectoResumen(nuevoId, nombre, 0, 0, System.currentTimeMillis(), modo))
-                    navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.NuevoProyecto.path) { inclusive = true } }
+                    navController.navigate(Ruta.Proyectos.path) {
+                        popUpTo(Ruta.NuevoProyecto.path) { inclusive = true }
+                    }
                 },
                 onCancelar = { navController.popBackStack() }
             )
@@ -59,6 +78,7 @@ fun GuayabappNavGraph(navController: NavHostController) {
         ) { backStack ->
             val proyectoId = backStack.arguments?.getLong("proyectoId") ?: 1L
             val db = remember { GeoFieldDatabase.getInstance(context) }
+            
             val factory = remember(proyectoId) {
                 object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
@@ -68,7 +88,11 @@ fun GuayabappNavGraph(navController: NavHostController) {
                 }
             }
             val viewModel: MapaViewModel = viewModel(factory = factory)
-            MapaVisorScreen(viewModel = viewModel, onNavegaConfiguracion = { navController.popBackStack() })
+            
+            MapaVisorScreen(
+                viewModel = viewModel,
+                onNavegaConfiguracion = { navController.popBackStack() }
+            )
         }
     }
 }

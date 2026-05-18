@@ -18,10 +18,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var locationRepo: LocationRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // CORRECCIÓN RADICAL 1: Forzar orientación vertical por hardware eliminando caprichos del sistema
+        // CORRECCIÓN ATÓMICA 1: Forzar vertical ANTES de que el sistema operativo intente renderizar la ventana
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        super.onCreate(savedInstanceState)
         
         locationRepo = LocationRepository(applicationContext)
         
@@ -41,7 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (locationRepo.tienePermisos()) {
-            LocationForegroundService.iniciar(this)
+            try { LocationForegroundService.iniciar(this) } catch (_: Exception) {}
         }
     }
 }

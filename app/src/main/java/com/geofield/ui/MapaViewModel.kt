@@ -11,8 +11,12 @@ import com.geofield.geo.KmlExporter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.lang.ref.WeakReference
 
-// ─── ESTADO UI ────────────────────────────────────────────────────────────────
+// ─── EXTENSIÓN PARA CONTROLAR EL MODO DE VISUALIZACIÓN DE CAPAS ─────────────
+enum class ModoCapaBase { OSM_ESTANDAR, ESRI_SATELITE, GEO_PDF }
+
+// ─── ESTADO UI ROBUSTO (ADAPTADO A CONTROLES COMPACTOS) ──────────────────────
 
 data class MapaUiState(
     val puntos: List<PuntoConMedia> = emptyList(),
@@ -20,17 +24,21 @@ data class MapaUiState(
     val todosLosMapas: List<MapaPdfEntity> = emptyList(),
     val puntoSeleccionado: PuntoConMedia? = null,
     val filtroTipo: String? = null,     // null = todos
+    val modoCapaBase: ModoCapaBase = ModoCapaBase.ESRI_SATELITE, // ESRI Satélite por defecto para Colombia
     val exportando: Boolean = false,
     val mensajeSnack: String? = null
 )
 
-// ─── VIEWMODEL ────────────────────────────────────────────────────────────────
+// ─── VIEWMODEL UNIFICADO Y PROTEGIDO DE FUGAS DE MEMORIA ─────────────────────
 
 class MapaViewModel(
     private val db: GeoFieldDatabase,
     private val proyectoId: Long,
-    private val context: Context
+    context: Context
 ) : ViewModel() {
+
+    // Evitamos Memory Leaks encapsulando el contexto en una referencia débil
+    private val contextRef = WeakReference(context.applicationContext)
 
     private val puntoDao = db.puntoDao()
     private val mapaPdfDao = db.mapaPdfDao()
@@ -39,16 +47,16 @@ class MapaViewModel(
     private val _estado = MutableStateFlow(MapaUiState())
     val estado: StateFlow<MapaUiState> = _estado.asStateFlow()
 
+    private var puntosJob: kotlinx.coroutines.Job? = null
+
     init {
         observarMapaActivo()
         observarPuntos()
-        cargarMapas()
     }
 
-    // ── Observación reactiva ──────────────────────────────────────────────────
+    // ── Observación reactiva de datos geoespaciales ────────────────────────────
 
     private fun observarMapaActivo() = viewModelScope.launch {
-        // Cuando cambia el mapa activo, recarga puntos del bbox de ese mapa
         mapaPdfDao.observarMapas(proyectoId)
             .distinctUntilChanged()
             .collect { mapas ->
@@ -58,13 +66,14 @@ class MapaViewModel(
             }
     }
 
-    private var puntosJob: kotlinx.coroutines.Job? = null
-
     private fun observarPuntos() {
         puntosJob?.cancel()
         puntosJob = viewModelScope.launch {
             val mapa = _estado.value.mapaActivo
-            val flow = if (mapa != null) {
+            val capaBase = _estado.value.modoCapaBase
+
+            // Si el modo de capa base es PDF, filtramos por Bbox; si es satélite global, exponemos la nube completa
+            val flow = if (capaBase == ModoCapaBase.GEO_PDF && mapa != null) {
                 puntoDao.observarPuntosEnBbox(
                     proyectoId,
                     mapa.latMin, mapa.latMax,
@@ -83,12 +92,31 @@ class MapaViewModel(
         }
     }
 
-    private fun cargarMapas() = viewModelScope.launch {
-        val activo = mapaPdfDao.obtenerActivo(proyectoId)
-        _estado.update { it.copy(mapaActivo = activo) }
+    // ── Alternador unificado de capas cartográficas (Un solo botón flotante) ──
+
+    fun alternarSiguienteCapa() {
+        _estado.update { currentState ->
+            val siguienteCapa = when (currentState.modoCapaBase) {
+                ModoCapaBase.ESRI_SATELITE -> ModoCapaBase.OSM_ESTANDAR
+                ModoCapaBase.OSM_ESTANDAR -> {
+                    if (currentState.mapaActivo != null) ModoCapaBase.GEO_PDF 
+                    else ModoCapaBase.ESRI_SATELITE
+                }
+                ModoCapaBase.GEO_PDF -> ModoCapaBase.ESRI_SATELITE
+            }
+            currentState.copy(modoCapaBase = siguienteCapa)
+        }
+        observarPuntos() // Sincroniza la consulta de la BD con el encuadre cartográfico
+        
+        val nombreCapa = when (_estado.value.modoCapaBase) {
+            ModoCapaBase.ESRI_SATELITE -> "Satélite (ESRI)"
+            ModoCapaBase.OSM_ESTANDAR -> "Mapa Base (OSM)"
+            ModoCapaBase.GEO_PDF -> "Plano GeoPDF: ${_estado.value.mapaActivo?.nombre}"
+        }
+        snack("Capa base: $nombreCapa")
     }
 
-    // ── Gestión de puntos ─────────────────────────────────────────────────────
+    // ── Gestión procedural de puntos técnicos de control ──────────────────────
 
     fun seleccionarPunto(puntoId: Long?) {
         val punto = if (puntoId != null) {
@@ -109,13 +137,12 @@ class MapaViewModel(
             lon = lon,
             altitud = altitud,
             precision = precision,
-            colorHex = colorPorTipo(tipo)
+            colorHex = colorHexPorTipo(tipo) // Corrección del conflicto de sobrecarga naming
         )
         val id = puntoDao.insertar(punto)
-        // Seleccionar automáticamente para mostrar el formulario
         observarPuntos()
         seleccionarPunto(id)
-        snack("Punto capturado · GPS ±${precision}m")
+        snack("Punto capturado · GPS ± ${"%.1f".format(precision)} m")
     }
 
     fun actualizarDescripcion(puntoId: Long, descripcion: String, camposJson: String) =
@@ -128,18 +155,18 @@ class MapaViewModel(
                     completo = descripcion.isNotBlank()
                 )
             )
-            snack("Cambios guardados")
+            snack("Cambios guardados exitosamente")
         }
 
     fun cambiarTipoPunto(puntoId: Long, nuevoTipo: String) = viewModelScope.launch {
         val punto = puntoDao.obtenerPunto(puntoId) ?: return@launch
         puntoDao.actualizar(
-            punto.copy(tipo = nuevoTipo, colorHex = colorPorTipo(nuevoTipo))
+            punto.copy(tipo = nuevoTipo, colorHex = colorHexPorTipo(nuevoTipo))
         )
+        observarPuntos()
     }
 
     fun eliminarPunto(puntoId: Long) = viewModelScope.launch {
-        // Eliminar fotos del disco antes de borrar de BD
         fotoDao.obtenerFotos(puntoId).forEach { foto ->
             File(foto.rutaArchivo).takeIf { it.exists() }?.delete()
         }
@@ -150,7 +177,7 @@ class MapaViewModel(
         snack("Punto eliminado")
     }
 
-    // ── Fotos ─────────────────────────────────────────────────────────────────
+    // ── Persistencia Multimedia ───────────────────────────────────────────────
 
     fun agregarFoto(
         puntoId: Long, rutaArchivo: String,
@@ -166,15 +193,15 @@ class MapaViewModel(
         )
     }
 
-    // ── Mapas PDF ─────────────────────────────────────────────────────────────
+    // ── Control de mapas GeoPDF locales ───────────────────────────────────────
 
     fun cambiarMapaActivo(mapaId: Long) = viewModelScope.launch {
         mapaPdfDao.desactivarTodos(proyectoId)
         mapaPdfDao.activar(mapaId)
         val mapa = _estado.value.todosLosMapas.find { it.id == mapaId }
-        _estado.update { it.copy(mapaActivo = mapa) }
+        _estado.update { it.copy(mapaActivo = mapa, modoCapaBase = ModoCapaBase.GEO_PDF) }
         observarPuntos()
-        snack("Mapa: ${mapa?.nombre} · reproyectando puntos…")
+        snack("Mapa: ${mapa?.nombre} · Ajustando grilla...")
     }
 
     fun cargarNuevoPdf(
@@ -194,71 +221,75 @@ class MapaViewModel(
                 widthPx = widthPx, heightPx = heightPx
             )
         )
-        snack("PDF cargado: $nombre")
+        observarMapaActivo()
+        snack("PDF importado con éxito: $nombre")
     }
-
-    // ── Filtros ───────────────────────────────────────────────────────────────
 
     fun filtrarPorTipo(tipo: String?) {
         _estado.update { it.copy(filtroTipo = tipo) }
         observarPuntos()
     }
 
-    // ── Exportación KML ───────────────────────────────────────────────────────
+    // ── Exportación e inyección de marca Guayabapp ───────────────────────────
 
     fun exportarKml(
         tiposIncluidos: List<String> = listOf("visual", "muestra", "estructura", "otro"),
         incluirFotos: Boolean = true,
         incluirPoligonos: Boolean = false
     ) = viewModelScope.launch {
+        val currentContext = contextRef.get() ?: return@launch
         _estado.update { it.copy(exportando = true) }
         try {
-            val puntosFiltrados = _estado.value.puntos
-                .filter { it.punto.tipo in tiposIncluidos }
+            val puntosFiltrados = _estado.value.puntos.filter { it.punto.tipo in tiposIncluidos }
 
+            // CORRECCIÓN: Inyección del prefijo de marca oficial de la App
             val kmlFile = KmlExporter.exportar(
-                context = context,
-                proyectoNombre = "Proyecto_GeoField",
+                context = currentContext,
+                proyectoNombre = "Proyecto_Guayabapp", 
                 puntos = puntosFiltrados,
                 incluirFotos = incluirFotos,
                 incluirPoligonos = incluirPoligonos
             )
 
-            compartirArchivo(kmlFile)
-            snack("KML exportado · ${puntosFiltrados.size} puntos")
+            compartirArchivo(currentContext, kmlFile)
+            snack("KML exportado · ${puntosFiltrados.size} registros")
         } catch (e: Exception) {
-            snack("Error al exportar: ${e.message}")
+            snack("Error de procesamiento: ${e.message}")
         } finally {
             _estado.update { it.copy(exportando = false) }
         }
     }
 
-    private fun compartirArchivo(file: File) {
+    private fun compartirArchivo(ctx: Context, file: File) {
         val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
+            ctx,
+            "${ctx.packageName}.fileprovider",
             file
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.google-earth.kml+xml"
             putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir KML"))
+        ctx.startActivity(Intent.createChooser(intent, "Compartir KML Técnico"))
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private fun colorPorTipo(tipo: String) = when (tipo) {
-        "visual"     -> "#00D084"
-        "muestra"    -> "#7C6AF7"
-        "estructura" -> "#F0A500"
-        else         -> "#6B7A99"
+    // CORRECCIÓN DE SOBRECARGA: Renombrada a colorHexPorTipo para evitar colisiones cromáticas
+    private fun colorHexPorTipo(tipo: String) = when (tipo) {
+        "visual"      -> "#87A922" // Cambiado al nuevo Verde Guayaba Maduro corporativo
+        "muestra"     -> "#7C6AF7" // Morado Munsell
+        "estructura"  -> "#F0A500" // Ámbar Geológico
+        else          -> "#6B7A99" // Gris mitigado
     }
 
     fun snack(msg: String) {
         _estado.update { it.copy(mensajeSnack = msg) }
     }
+
+    fun snackConsumido() {
+        _estado.update { it.copy(mensajeSnack = null) }
+    }
+}
 
     fun snackConsumido() {
         _estado.update { it.copy(mensajeSnack = null) }

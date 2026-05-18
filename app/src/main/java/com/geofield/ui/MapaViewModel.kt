@@ -24,7 +24,7 @@ data class MapaUiState(
     val todosLosMapas: List<MapaPdfEntity> = emptyList(),
     val puntoSeleccionado: PuntoConMedia? = null,
     val filtroTipo: String? = null,     // null = todos
-    val modoCapaBase: ModoCapaBase = ModoCapaBase.ESRI_SATELITE, // ESRI Satélite por defecto para Colombia
+    val modoCapaBase: ModoCapaBase = ModoCapaBase.ESRI_SATELITE, // ESRI Satélite por defecto para Colombia 
     val exportando: Boolean = false,
     val mensajeSnack: String? = null
 )
@@ -72,7 +72,7 @@ class MapaViewModel(
             val mapa = _estado.value.mapaActivo
             val capaBase = _estado.value.modoCapaBase
 
-            // Si el modo de capa base es PDF, filtramos por Bbox; si es satélite global, exponemos la nube completa
+            // Si el modo de capa base es PDF, filtramos por Bbox; si es satélite global, exponemos la nube completa 
             val flow = if (capaBase == ModoCapaBase.GEO_PDF && mapa != null) {
                 puntoDao.observarPuntosEnBbox(
                     proyectoId,
@@ -106,12 +106,12 @@ class MapaViewModel(
             }
             currentState.copy(modoCapaBase = siguienteCapa)
         }
-        observarPuntos() // Sincroniza la consulta de la BD con el encuadre cartográfico
+        observarPuntos() // Sincroniza la nube de puntos con la estrategia de mapa base activa 
         
         val nombreCapa = when (_estado.value.modoCapaBase) {
-            ModoCapaBase.ESRI_SATELITE -> "Satélite (ESRI)"
-            ModoCapaBase.OSM_ESTANDAR -> "Mapa Base (OSM)"
-            ModoCapaBase.GEO_PDF -> "Plano GeoPDF: ${_estado.value.mapaActivo?.nombre}"
+            ModoCapaBase.ESRI_SATELITE -> "Satélite (ESRI)" 
+            ModoCapaBase.OSM_ESTANDAR -> "Mapa Base (OSM)" 
+            ModoCapaBase.GEO_PDF -> "Plano GeoPDF: ${_estado.value.mapaActivo?.nombre}" 
         }
         snack("Capa base: $nombreCapa")
     }
@@ -137,7 +137,7 @@ class MapaViewModel(
             lon = lon,
             altitud = altitud,
             precision = precision,
-            colorHex = colorHexPorTipo(tipo) // Corrección del conflicto de sobrecarga naming
+            colorHex = colorHexPorTipo(tipo) // Soluciona el error de sobrecarga de nombres de color 
         )
         val id = puntoDao.insertar(punto)
         observarPuntos()
@@ -230,7 +230,7 @@ class MapaViewModel(
         observarPuntos()
     }
 
-    // ── Exportación e inyección de marca Guayabapp ───────────────────────────
+    // ── Exportación con Inyección de Marca Oficial de Guayabapp ────────────────
 
     fun exportarKml(
         tiposIncluidos: List<String> = listOf("visual", "muestra", "estructura", "otro"),
@@ -242,10 +242,9 @@ class MapaViewModel(
         try {
             val puntosFiltrados = _estado.value.puntos.filter { it.punto.tipo in tiposIncluidos }
 
-            // CORRECCIÓN: Inyección del prefijo de marca oficial de la App
             val kmlFile = KmlExporter.exportar(
                 context = currentContext,
-                proyectoNombre = "Proyecto_Guayabapp", 
+                proyectoNombre = "Proyecto_Guayabapp", // Identidad oficial grabada en el KML 
                 puntos = puntosFiltrados,
                 incluirFotos = incluirFotos,
                 incluirPoligonos = incluirPoligonos
@@ -274,22 +273,17 @@ class MapaViewModel(
         ctx.startActivity(Intent.createChooser(intent, "Compartir KML Técnico"))
     }
 
-    // CORRECCIÓN DE SOBRECARGA: Renombrada a colorHexPorTipo para evitar colisiones cromáticas
+    // CORRECCIÓN DE SOBRECARGA: Renombrada a colorHexPorTipo para no colisionar con firmas Android e Int 
     private fun colorHexPorTipo(tipo: String) = when (tipo) {
-        "visual"      -> "#87A922" // Cambiado al nuevo Verde Guayaba Maduro corporativo
-        "muestra"     -> "#7C6AF7" // Morado Munsell
-        "estructura"  -> "#F0A500" // Ámbar Geológico
-        else          -> "#6B7A99" // Gris mitigado
+        "visual"      -> "#87A922" // Verde Guayaba Maduro Corporativo 
+        "muestra"     -> "#7C6AF7" // Morado Munsell 
+        "estructura"  -> "#F0A500" // Ámbar Geológico 
+        else          -> "#6B7A99" // Gris mitigado 
     }
 
     fun snack(msg: String) {
         _estado.update { it.copy(mensajeSnack = msg) }
     }
-
-    fun snackConsumido() {
-        _estado.update { it.copy(mensajeSnack = null) }
-    }
-}
 
     fun snackConsumido() {
         _estado.update { it.copy(mensajeSnack = null) }

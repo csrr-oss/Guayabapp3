@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,7 +14,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geofield.location.LocationForegroundService
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 private object EstilosSoporte {
     val Fondo       = Color(0xFF0F1117)
@@ -48,6 +52,10 @@ private object EstilosSoporte {
 
 data class ProyectoResumen(val id: Long, val nombre: String, val totalPuntos: Int, val totalFotos: Int, val ultimaActividad: Long, val modoCapa: ModoCapaBase)
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. SPLASH SCREEN (CON LOGO CENTRAL SEGURO Y COMPACTO)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 @Composable
 fun SplashScreen(onListo: () -> Unit) {
     LaunchedEffect(Unit) {
@@ -57,7 +65,6 @@ fun SplashScreen(onListo: () -> Unit) {
 
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(colors = listOf(Color(0xFF1A2416), EstilosSoporte.Fondo), radius = 900f)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            // CORRECCIÓN 2: Logo fijo visible al 100% sin depender de alphas transitorios rotos
             Box(
                 Modifier
                     .size(96.dp)
@@ -73,6 +80,10 @@ fun SplashScreen(onListo: () -> Unit) {
         Text(text = "v1.1.0 · Sistema Resiliente", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp), style = EstilosSoporte.LabelMedium, color = EstilosSoporte.Muted)
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. PANTALLA PERMISOS ADAPTATIVA (TAMAÑO FIJO Y CENTRADO DE TARJETAS SIMÉTRICAS)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
 fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
@@ -91,7 +102,7 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(
-            Modifier.width(360.dp).padding(16.dp), // CORRECCIÓN 3: Tamaño fijo y centrado simétrico absoluto
+            Modifier.width(360.dp).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -132,6 +143,10 @@ private fun ItemPermiso(icono: androidx.compose.ui.graphics.vector.ImageVector, 
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. EXPLORADOR DE PROYECTOS (ISOTIPO CIRCULAR AL LADO DEL NOMBRE)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProyectosScreen(onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit) {
@@ -170,8 +185,19 @@ fun ProyectosScreen(onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit
 @Composable
 private fun TarjetaProyecto(proyecto: ProyectoResumen, onClick: () -> Unit) {
     val fmt = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
-    val colorModo = when (proyecto.modoCapa) { ModoCapaBase.GEO_PDF -> EstilosSoporte.Amber ModoCapaBase.OSM_ESTANDAR -> EstilosSoporte.Accent2 ModoCapaBase.ESRI_SATELITE -> EstilosSoporte.Accent }
-    val labelModo = when (proyecto.modoCapa) { ModoCapaBase.GEO_PDF -> "PDF" ModoCapaBase.OSM_ESTANDAR -> "OSM" ModoCapaBase.ESRI_SATELITE -> "SAT" }
+    
+    // CORRECCIÓN LÍNEAS 173-174: Bloque con sintaxis multilínea estricta con llaves para asegurar compilación KSP limpia
+    val colorModo = when (proyecto.modoCapa) { 
+        ModoCapaBase.GEO_PDF -> { EstilosSoporte.Amber }
+        ModoCapaBase.OSM_ESTANDAR -> { EstilosSoporte.Accent2 }
+        ModoCapaBase.ESRI_SATELITE -> { EstilosSoporte.Accent }
+    }
+    
+    val labelModo = when (proyecto.modoCapa) { 
+        ModoCapaBase.GEO_PDF -> { "PDF" }
+        ModoCapaBase.OSM_ESTANDAR -> { "OSM" }
+        ModoCapaBase.ESRI_SATELITE -> { "SAT" }
+    }
 
     Surface(onClick = onClick, color = EstilosSoporte.Superficie, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -235,7 +261,7 @@ private fun ColumnScope.ItemConfig(icono: androidx.compose.ui.graphics.vector.Im
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. NUEVO PROYECTO (CORREGIDO: EL BOTÓN DE INICIALIZACIÓN NO SE CONGELA JAMÁS)
+// 4. NUEVO PROYECTO (SIEMPRE ACTIVO Y REACTIVO AL EMPEZAR)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
@@ -256,9 +282,8 @@ fun NuevoProyectoScreen(onCrear: (nombre: String, modo: ModoCapaBase) -> Unit, o
                     shape = RoundedCornerShape(8.dp), singleLine = true
                 )
 
-                // Botón de Inicializar siempre reactivo sin condicionales que congelen el hilo
                 Button(
-                    onClick = { if (nombre.isNotBlank()) onCrear(nombre, modoElegido) else nombre = "Campaña Campo Unificada" },
+                    onClick = { if (nombre.isNotBlank()) onCrear(nombre, modoElegido) else onCrear("Campaña Campo Unificada", modoElegido) },
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black),
                     shape = RoundedCornerShape(8.dp)

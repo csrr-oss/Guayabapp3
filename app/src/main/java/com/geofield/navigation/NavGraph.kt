@@ -9,10 +9,8 @@ import androidx.navigation.compose.*
 import com.geofield.ui.*
 import com.geofield.data.GeoFieldDatabase
 
-// ─── EXTENSIÓN CENTRAL DE CAPAS CARTOGRÁFICAS (UNIFICADA AQUÍ) ───────────────
 enum class ModoCapaBase { OSM_ESTANDAR, ESRI_SATELITE, GEO_PDF }
 
-// ─── ENRUTADOR DE COORDENADAS E IDENTIDAD DE MARCA ───────────────────────────
 sealed class Ruta(val path: String) {
     object Splash        : Ruta("splash")
     object Proyectos     : Ruta("proyectos")
@@ -23,31 +21,31 @@ sealed class Ruta(val path: String) {
 
 @Composable
 fun GuayabappNavGraph(navController: NavHostController) {
-    val proyectosGlobales = remember { mutableStateListOf<ProyectoResumen>() }
+    // CORRECCIÓN PUNTO 3: Precargar los proyectos base directamente en la lista reactiva inicial
+    val proyectosGlobales = remember { 
+        mutableStateListOf(
+            ProyectoResumen(1, "Cuenca Caño Limón", 14, 27, System.currentTimeMillis() - 3600000, ModoCapaBase.ESRI_SATELITE),
+            ProyectoResumen(2, "Sector Arauca Norte", 6, 8, System.currentTimeMillis() - 86400000, ModoCapaBase.GEO_PDF),
+            ProyectoResumen(3, "Levantamiento Vichada", 0, 0, System.currentTimeMillis() - 172800000, ModoCapaBase.OSM_ESTANDAR)
+        )
+    }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     NavHost(navController = navController, startDestination = Ruta.Splash.path) {
-
         composable(Ruta.Splash.path) {
             SplashScreen(onListo = {
                 val repo = com.geofield.location.LocationRepository(context)
                 if (repo.tienePermisos()) {
-                    navController.navigate(Ruta.Proyectos.path) {
-                        popUpTo(Ruta.Splash.path) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.Splash.path) { inclusive = true } }
                 } else {
-                    navController.navigate(Ruta.Offline.path) {
-                        popUpTo(Ruta.Splash.path) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Offline.path) { popUpTo(Ruta.Splash.path) { inclusive = true } }
                 }
             })
         }
 
         composable(Ruta.Offline.path) {
             PantallaPermisos(onPermisosConcedidos = {
-                navController.navigate(Ruta.Proyectos.path) {
-                    popUpTo(Ruta.Offline.path) { inclusive = true }
-                }
+                navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.Offline.path) { inclusive = true } }
             })
         }
 
@@ -64,9 +62,7 @@ fun GuayabappNavGraph(navController: NavHostController) {
                 onCrear = { nombre, modo ->
                     val nuevoId = (proyectosGlobales.size + 1).toLong()
                     proyectosGlobales.add(ProyectoResumen(nuevoId, nombre, 0, 0, System.currentTimeMillis(), modo))
-                    navController.navigate(Ruta.Proyectos.path) {
-                        popUpTo(Ruta.NuevoProyecto.path) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Proyectos.path) { popUpTo(Ruta.NuevoProyecto.path) { inclusive = true } }
                 },
                 onCancelar = { navController.popBackStack() }
             )
@@ -78,7 +74,6 @@ fun GuayabappNavGraph(navController: NavHostController) {
         ) { backStack ->
             val proyectoId = backStack.arguments?.getLong("proyectoId") ?: 1L
             val db = remember { GeoFieldDatabase.getInstance(context) }
-            
             val factory = remember(proyectoId) {
                 object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
@@ -88,11 +83,7 @@ fun GuayabappNavGraph(navController: NavHostController) {
                 }
             }
             val viewModel: MapaViewModel = viewModel(factory = factory)
-            
-            MapaVisorScreen(
-                viewModel = viewModel,
-                onNavegaConfiguracion = { navController.popBackStack() }
-            )
+            MapaVisorScreen(viewModel = viewModel, onNavegaConfiguracion = { navController.popBackStack() })
         }
     }
 }

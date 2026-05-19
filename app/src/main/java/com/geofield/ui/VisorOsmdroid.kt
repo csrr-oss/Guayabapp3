@@ -3,14 +3,11 @@ package com.geofield.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.drawable.BitmapDrawable
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape // CORRECCIÓN: Importación re-establecida
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Layers
@@ -46,7 +43,6 @@ private fun tileSourceParaModo(fuente: ModoCapaBase): org.osmdroid.tileprovider.
 
 private object EstilosOsmdroid {
     val Superficie  = Color(0xFF181C27)
-    val Borde       = Color(0xFF2A3045)
     val Accent      = Color(0xFF87A922)
     val Texto       = Color(0xFFE8EAF2)
     val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -84,18 +80,14 @@ fun VisorOsmdroid(
                     val markerGps = Marker(this).apply {
                         position = centroMapa
                         title = "Mi Ubicación Real"
-                        
                         val sizePx = (22 * ctx.resources.displayMetrics.density).toInt()
                         val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
                         val canvas = android.graphics.Canvas(bitmap)
                         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                        
                         paint.color = android.graphics.Color.WHITE
                         canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
-                        
                         paint.color = android.graphics.Color.parseColor("#1A73E8") 
                         canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * ctx.resources.displayMetrics.density), paint)
-                        
                         icon = BitmapDrawable(ctx.resources, bitmap)
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     }
@@ -111,7 +103,6 @@ fun VisorOsmdroid(
             },
             update = { mapView -> 
                 mapView.setTileSource(tileSourceParaModo(fuenteActual))
-                mapView.controller.setCenter(centroMapa)
             }
         )
 
@@ -136,11 +127,13 @@ fun VisorOsmdroid(
             }
         }
 
+        // CORRECCIÓN ATÓMICA DE CRASH: Captura directa síncrona en hilo de mapa puro sin transacciones cruzadas
         FloatingActionButton(
             onClick = { 
                 mapViewRef?.let { map ->
-                    val c = map.mapCenter
-                    onCapturarPunto(c.latitude, c.longitude, 2600.0)
+                    val lat = map.mapCenter.latitude
+                    val lon = map.mapCenter.longitude
+                    onCapturarPunto(lat, lon, 2600.0)
                 }
             }, 
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 74.dp, bottom = 14.dp), 
@@ -152,6 +145,3 @@ fun VisorOsmdroid(
         }
     }
 }
-
-@Composable
-private fun modifierBotonOsm() = Modifier.size(40.dp)

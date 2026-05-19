@@ -3,6 +3,7 @@ package com.geofield.ui
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -51,22 +54,38 @@ private object EstilosSoporte {
 
 data class ProyectoResumen(val id: Long, val nombre: String, val totalPuntos: Int, val totalFotos: Int, val ultimaActividad: Long, val modoCapa: ModoCapaBase)
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUNTO 1: SPLASH SCREEN CON LOGO VECTORIAL NATIVO POR CANVAS (100% GARANTIZADO)
+// ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun SplashScreen(onListo: () -> Unit) {
     LaunchedEffect(Unit) { delay(2200); onListo() }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            Surface(
-                modifier = Modifier.size(140.dp),
-                color = EstilosSoporte.Superficie,
-                shape = CircleShape,
-                border = BorderStroke(3.dp, EstilosSoporte.Accent)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Terrain, contentDescription = "Logo", tint = EstilosSoporte.Accent, modifier = Modifier.size(72.dp))
+            // Reemplazo total: Canvas geométrico de alta fidelidad que no depende de fuentes de íconos
+            Canvas(modifier = Modifier.size(140.dp).background(EstilosSoporte.Superficie, CircleShape).border(3.dp, EstilosSoporte.Accent, CircleShape)) {
+                val w = size.width
+                val h = size.height
+                
+                // Dibujamos una silueta de montaña topográfica estilizada mediante vectores puros
+                val pathMontana = Path().apply {
+                    moveTo(w * 0.25f, h * 0.70f)
+                    lineTo(w * 0.50f, h * 0.30f)
+                    lineTo(w * 0.75f, h * 0.70f)
+                    close()
                 }
+                drawPath(path = pathMontana, color = EstilosSoporte.Accent)
+                
+                // Línea de horizonte SIG
+                drawLine(
+                    color = EstilosSoporte.Texto2,
+                    start = Offset(w * 0.15f, h * 0.70f),
+                    end = Offset(w * 0.85f, h * 0.70f),
+                    strokeWidth = 3.dp.toPx()
+                )
             }
+            
             Text(text = "Guayabapp", style = EstilosSoporte.TitleLarge, color = EstilosSoporte.Texto, letterSpacing = 1.5.sp)
             Text(text = "Levantamiento Georreferenciado Offline", style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2)
         }
@@ -81,12 +100,7 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.width(360.dp).padding(16.dp), 
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // CORRECCIÓN: Cambiado GpsFine por GpsFixed nativo
+        Column(Modifier.width(360.dp).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
             Text(text = "Permisos Requeridos", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
             
@@ -137,8 +151,15 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         topBar = { 
             Surface(color = EstilosSoporte.Superficie) { 
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { 
-                    Box(Modifier.size(28.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.2.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(14.dp))
+                    // LOGO SUPERIOR TAMBIÉN CONVERTIDO A CANVAS SEGURO
+                    Canvas(modifier = Modifier.size(24.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.dp, EstilosSoporte.Accent, CircleShape)) {
+                        val path = Path().apply {
+                            moveTo(size.width * 0.25f, size.height * 0.7f)
+                            lineTo(size.width * 0.5f, size.height * 0.3f)
+                            lineTo(size.width * 0.7f, size.height * 0.7f)
+                            close()
+                        }
+                        drawPath(path, EstilosSoporte.Accent)
                     }
                     Spacer(Modifier.width(8.dp))
                     Text("Guayabapp", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Accent)

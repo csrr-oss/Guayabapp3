@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.geofield.location.LocationForegroundService
 import com.geofield.navigation.ModoCapaBase
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 private object EstilosSoporte {
     val Fondo       = Color(0xFF0F1117)
@@ -55,7 +57,6 @@ fun SplashScreen(onListo: () -> Unit) {
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            // El Isotipo ahora se renderiza usando un contenedor de superficie pura indexada
             Surface(
                 modifier = Modifier.size(140.dp),
                 color = EstilosSoporte.Superficie,
@@ -80,11 +81,15 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
-        Column(Modifier.width(360.dp).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Icon(Icons.Default.GpsFine, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
+        Column(
+            Modifier.width(360.dp).padding(16.dp), 
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // CORRECCIÓN: Cambiado GpsFine por GpsFixed nativo
+            Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
             Text(text = "Permisos Requeridos", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
             
-            // CORRECCIÓN 2: Asegurar el listado completo y estricto de los 4 frentes operacionales
             Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital", "Fijación WGS84 precisa.")
                 ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara de Control", "Captura de evidencias fotográficas.")
@@ -132,7 +137,6 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         topBar = { 
             Surface(color = EstilosSoporte.Superficie) { 
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { 
-                    // PUNTO 7: Re-incorporación estricta del Isotipo circular en la esquina del Toolbar superior
                     Box(Modifier.size(28.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.2.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(14.dp))
                     }
@@ -145,7 +149,6 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         },
         floatingActionButton = { FloatingActionButton(onClick = onNuevoProyecto, containerColor = EstilosSoporte.Accent, contentColor = Color.Black, shape = CircleShape) { Icon(Icons.Default.Add, null) } }
     ) { padding ->
-        // CORRECCIÓN PUNTO 3: Los proyectos base inyectados desde el NavGraph se listan aquí de forma obligatoria
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(proyectos, key = { it.id }) { p ->
                 Surface(onClick = { onAbrirProyecto(p.id) }, color = EstilosSoporte.Superficie, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {

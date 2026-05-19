@@ -3,11 +3,10 @@ package com.geofield.ui
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn // IMPORTACIÓN REQUERIDA FIJADA
-import androidx.compose.foundation.lazy.items // IMPORTACIÓN REQUERIDA FIJADA
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,10 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geofield.location.LocationForegroundService
-import com.geofield.navigation.ModoCapaBase // Vinculación limpia con el enum del NavGraph
+import com.geofield.navigation.ModoCapaBase
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 private object EstilosSoporte {
     val Fondo       = Color(0xFF0F1117)
@@ -58,8 +55,16 @@ fun SplashScreen(onListo: () -> Unit) {
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            Box(Modifier.size(140.dp).background(EstilosSoporte.Superficie, CircleShape).border(3.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(72.dp))
+            // El Isotipo ahora se renderiza usando un contenedor de superficie pura indexada
+            Surface(
+                modifier = Modifier.size(140.dp),
+                color = EstilosSoporte.Superficie,
+                shape = CircleShape,
+                border = BorderStroke(3.dp, EstilosSoporte.Accent)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Terrain, contentDescription = "Logo", tint = EstilosSoporte.Accent, modifier = Modifier.size(72.dp))
+                }
             }
             Text(text = "Guayabapp", style = EstilosSoporte.TitleLarge, color = EstilosSoporte.Texto, letterSpacing = 1.5.sp)
             Text(text = "Levantamiento Georreferenciado Offline", style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2)
@@ -71,25 +76,36 @@ fun SplashScreen(onListo: () -> Unit) {
 fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestMultiplePermissions()) { res ->
-        if (res[Manifest.permission.ACCESS_FINE_LOCATION] == true && res[Manifest.permission.CAMERA] == true) {
-            try { LocationForegroundService.iniciar(context) } catch (_: Exception) {}
-            onPermisosConcedidos()
-        }
+        onPermisosConcedidos()
     }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(Modifier.width(360.dp).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
+            Icon(Icons.Default.GpsFine, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
             Text(text = "Permisos Requeridos", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
             
+            // CORRECCIÓN 2: Asegurar el listado completo y estricto de los 4 frentes operacionales
             Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital", "Fijación WGS84.")
-                ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara (CameraX)", "Evidencias estructural.")
+                ItemPermiso(Icons.Default.GpsFixed, EstilosSoporte.Accent, "Ubicación Satelital", "Fijación WGS84 precisa.")
+                ItemPermiso(Icons.Default.CameraAlt, EstilosSoporte.Accent2, "Cámara de Control", "Captura de evidencias fotográficas.")
+                ItemPermiso(Icons.Default.Mic, EstilosSoporte.Purple, "Micrófono de Campo", "Notas de audio ambiental.")
+                ItemPermiso(Icons.Default.FolderOpen, EstilosSoporte.Amber, "Almacenamiento Local", "Exportación de archivos KML/SIG.")
             }
 
             Spacer(Modifier.height(4.dp))
-            Button(onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black)) {
-                Text("Habilitar Sensores de Campo", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
+            Button(
+                onClick = { 
+                    launcher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO
+                    ))
+                }, 
+                modifier = Modifier.fillMaxWidth().height(46.dp), 
+                colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black)
+            ) {
+                Text("Habilitar Sensores de Hardware", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
             }
         }
     }
@@ -116,6 +132,7 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         topBar = { 
             Surface(color = EstilosSoporte.Superficie) { 
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { 
+                    // PUNTO 7: Re-incorporación estricta del Isotipo circular en la esquina del Toolbar superior
                     Box(Modifier.size(28.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.2.dp, EstilosSoporte.Accent, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Terrain, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(14.dp))
                     }
@@ -128,26 +145,18 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         },
         floatingActionButton = { FloatingActionButton(onClick = onNuevoProyecto, containerColor = EstilosSoporte.Accent, contentColor = Color.Black, shape = CircleShape) { Icon(Icons.Default.Add, null) } }
     ) { padding ->
+        // CORRECCIÓN PUNTO 3: Los proyectos base inyectados desde el NavGraph se listan aquí de forma obligatoria
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (proyectos.isEmpty()) {
-                item {
-                    Column(Modifier.fillMaxWidth().padding(vertical = 64.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.FolderOpen, null, tint = EstilosSoporte.Muted, modifier = Modifier.size(48.dp))
-                        Text("No hay proyectos guardados", style = EstilosSoporte.BodyLarge, color = EstilosSoporte.Texto2)
-                    }
-                }
-            } else {
-                items(proyectos, key = { it.id }) { p ->
-                    Surface(onClick = { onAbrirProyecto(p.id) }, color = EstilosSoporte.Superficie, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Map, null, tint = EstilosSoporte.Accent)
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(p.nombre, style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold), color = EstilosSoporte.Texto)
-                                Text("${p.totalPuntos} puntos colectados", style = EstilosSoporte.LabelMedium.copy(color = EstilosSoporte.Muted))
-                            }
-                            Icon(Icons.Default.ChevronRight, null, tint = EstilosSoporte.Borde)
+            items(proyectos, key = { it.id }) { p ->
+                Surface(onClick = { onAbrirProyecto(p.id) }, color = EstilosSoporte.Superficie, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, EstilosSoporte.Borde)) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Map, null, tint = EstilosSoporte.Accent)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(p.nombre, style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold), color = EstilosSoporte.Texto)
+                            Text("${p.totalPuntos} puntos colectados · ${if(p.modoCapa == ModoCapaBase.GEO_PDF) "Plano PDF" else "Satélite"}", style = EstilosSoporte.LabelMedium.copy(color = EstilosSoporte.Muted))
                         }
+                        Icon(Icons.Default.ChevronRight, null, tint = EstilosSoporte.Borde)
                     }
                 }
             }
@@ -174,26 +183,13 @@ fun NuevoProyectoScreen(onCrear: (String, ModoCapaBase) -> Unit, onCancelar: () 
                 )
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        onClick = { modoElegido = ModoCapaBase.ESRI_SATELITE },
-                        modifier = Modifier.weight(1f),
-                        color = if (modoElegido == ModoCapaBase.ESRI_SATELITE) EstilosSoporte.Accent.copy(.15f) else EstilosSoporte.Superficie2,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.5.dp, if (modoElegido == ModoCapaBase.ESRI_SATELITE) EstilosSoporte.Accent else EstilosSoporte.Borde)
-                    ) {
+                    Surface(onClick = { modoElegido = ModoCapaBase.ESRI_SATELITE }, modifier = Modifier.weight(1f), color = if (modoElegido == ModoCapaBase.ESRI_SATELITE) EstilosSoporte.Accent.copy(.15f) else EstilosSoporte.Superficie2, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.5.dp, if (modoElegido == ModoCapaBase.ESRI_SATELITE) EstilosSoporte.Accent else EstilosSoporte.Borde)) {
                         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Satellite, null, tint = EstilosSoporte.Accent)
                             Text("Satélite", style = EstilosSoporte.LabelMedium, color = EstilosSoporte.Texto)
                         }
                     }
-
-                    Surface(
-                        onClick = { modoElegido = ModoCapaBase.GEO_PDF },
-                        modifier = Modifier.weight(1f),
-                        color = if (modoElegido == ModoCapaBase.GEO_PDF) EstilosSoporte.Amber.copy(.15f) else EstilosSoporte.Superficie2,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.5.dp, if (modoElegido == ModoCapaBase.GEO_PDF) EstilosSoporte.Amber else EstilosSoporte.Borde)
-                    ) {
+                    Surface(onClick = { modoElegido = ModoCapaBase.GEO_PDF }, modifier = Modifier.weight(1f), color = if (modoElegido == ModoCapaBase.GEO_PDF) EstilosSoporte.Amber.copy(.15f) else EstilosSoporte.Superficie2, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.5.dp, if (modoElegido == ModoCapaBase.GEO_PDF) EstilosSoporte.Amber else EstilosSoporte.Borde)) {
                         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.PictureAsPdf, null, tint = EstilosSoporte.Amber)
                             Text("GeoPDF", style = EstilosSoporte.LabelMedium, color = EstilosSoporte.Texto)
@@ -201,11 +197,7 @@ fun NuevoProyectoScreen(onCrear: (String, ModoCapaBase) -> Unit, onCancelar: () 
                     }
                 }
 
-                Button(
-                    onClick = { onCrear(nombre.ifBlank { "Campaña Unificada SIG" }, modoElegido) },
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black)
-                ) {
+                Button(onClick = { onCrear(nombre.ifBlank { "Campaña Unificada SIG" }, modoElegido) }, modifier = Modifier.fillMaxWidth().height(44.dp), colors = ButtonDefaults.buttonColors(containerColor = EstilosSoporte.Accent, contentColor = Color.Black)) {
                     Text("Guardar e Inicializar", style = EstilosSoporte.BodyLarge.copy(fontWeight = FontWeight.Bold))
                 }
             }

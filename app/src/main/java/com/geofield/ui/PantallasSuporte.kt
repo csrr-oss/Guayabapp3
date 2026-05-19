@@ -15,10 +15,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.geometry.Offset // CORRECCIÓN EXPLICITA: Importación de geometría agregada
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -55,7 +55,7 @@ private object EstilosSoporte {
 data class ProyectoResumen(val id: Long, val nombre: String, val totalPuntos: Int, val totalFotos: Int, val ultimaActividad: Long, val modoCapa: ModoCapaBase)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PUNTO 1: SPLASH SCREEN CON LOGO VECTORIAL NATIVO POR CANVAS (100% GARANTIZADO)
+// 1. SPLASH SCREEN CON LOGO VECTORIAL GRANDE POR CANVAS NATIVO
 // ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun SplashScreen(onListo: () -> Unit) {
@@ -63,12 +63,10 @@ fun SplashScreen(onListo: () -> Unit) {
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            // Reemplazo total: Canvas geométrico de alta fidelidad que no depende de fuentes de íconos
             Canvas(modifier = Modifier.size(140.dp).background(EstilosSoporte.Superficie, CircleShape).border(3.dp, EstilosSoporte.Accent, CircleShape)) {
                 val w = size.width
                 val h = size.height
                 
-                // Dibujamos una silueta de montaña topográfica estilizada mediante vectores puros
                 val pathMontana = Path().apply {
                     moveTo(w * 0.25f, h * 0.70f)
                     lineTo(w * 0.50f, h * 0.30f)
@@ -77,7 +75,7 @@ fun SplashScreen(onListo: () -> Unit) {
                 }
                 drawPath(path = pathMontana, color = EstilosSoporte.Accent)
                 
-                // Línea de horizonte SIG
+                // Línea de horizonte SIG - Ya reconoce la clase Offset correctamente
                 drawLine(
                     color = EstilosSoporte.Texto2,
                     start = Offset(w * 0.15f, h * 0.70f),
@@ -92,6 +90,9 @@ fun SplashScreen(onListo: () -> Unit) {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. PANTALLA PERMISOS ADAPTATIVA (DIÁLOGOS UNIFORMES Y CENTRADOS)
+// ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     val context = LocalContext.current
@@ -100,7 +101,11 @@ fun PantallaPermisos(onPermisosConcedidos: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(EstilosSoporte.Fondo), contentAlignment = Alignment.Center) {
-        Column(Modifier.width(360.dp).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            Modifier.width(360.dp).padding(16.dp), 
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Icon(Icons.Default.GpsFixed, null, tint = EstilosSoporte.Accent, modifier = Modifier.size(48.dp))
             Text(text = "Permisos Requeridos", style = EstilosSoporte.TitleMedium, color = EstilosSoporte.Texto)
             
@@ -143,6 +148,9 @@ private fun ItemPermiso(icono: androidx.compose.ui.graphics.vector.ImageVector, 
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. EXPLORADOR DE PROYECTOS (CON LOGO EN LA BARRA SUPERIOR)
+// ═══════════════════════════════════════════════════════════════════════════════
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) -> Unit, onNuevoProyecto: () -> Unit) {
@@ -151,7 +159,6 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
         topBar = { 
             Surface(color = EstilosSoporte.Superficie) { 
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) { 
-                    // LOGO SUPERIOR TAMBIÉN CONVERTIDO A CANVAS SEGURO
                     Canvas(modifier = Modifier.size(24.dp).background(EstilosSoporte.Accent.copy(0.15f), CircleShape).border(1.dp, EstilosSoporte.Accent, CircleShape)) {
                         val path = Path().apply {
                             moveTo(size.width * 0.25f, size.height * 0.7f)
@@ -188,6 +195,9 @@ fun ProyectosScreen(proyectos: List<ProyectoResumen>, onAbrirProyecto: (Long) ->
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. FORMULARIO DE NUEVO PROYECTO
+// ═══════════════════════════════════════════════════════════════════════════════
 @Composable
 fun NuevoProyectoScreen(onCrear: (String, ModoCapaBase) -> Unit, onCancelar: () -> Unit) {
     var nombre by remember { mutableStateOf("") }

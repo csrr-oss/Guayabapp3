@@ -3,13 +3,18 @@ package com.geofield.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape // CORRECCIÓN: Importación re-establecida
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,13 +34,8 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-
-private object EstilosOsmdroid {
-    val Superficie  = Color(0xFF181C27)
-    val Accent      = Color(0xFF87A922)
-    val Texto       = Color(0xFFE8EAF2)
-    val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-}
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 private fun tileSourceParaModo(fuente: ModoCapaBase): org.osmdroid.tileprovider.tilesource.ITileSource =
     when (fuente) {
@@ -43,6 +43,14 @@ private fun tileSourceParaModo(fuente: ModoCapaBase): org.osmdroid.tileprovider.
         ModoCapaBase.ESRI_SATELITE -> org.osmdroid.tileprovider.tilesource.XYTileSource("ESRI_Imagery", 0, 19, 256, ".jpg", arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"))
         ModoCapaBase.GEO_PDF -> org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK
     }
+
+private object EstilosOsmdroid {
+    val Superficie  = Color(0xFF181C27)
+    val Borde       = Color(0xFF2A3045)
+    val Accent      = Color(0xFF87A922)
+    val Texto       = Color(0xFFE8EAF2)
+    val LabelMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+}
 
 @Composable
 fun VisorOsmdroid(
@@ -59,7 +67,6 @@ fun VisorOsmdroid(
     var coordenadasCentroText by remember { mutableStateOf("No data") }
     var menuDesplegado by remember { mutableStateOf(false) }
 
-    // PUNTO 4: Forzar el enfoque inicial en Bogotá/Colombia o en el punto seleccionado
     val centroMapa = remember(puntoSeleccionado) {
         puntoSeleccionado?.punto?.let { GeoPoint(it.lat, it.lon) } ?: GeoPoint(4.624, -74.063) 
     }
@@ -71,10 +78,9 @@ fun VisorOsmdroid(
                 MapView(ctx).apply {
                     setTileSource(tileSourceParaModo(fuenteActual))
                     setMultiTouchControls(true)
-                    controller.setZoom(16.0) // Zoom cerrado de alta precisión inicial
+                    controller.setZoom(16.0) 
                     controller.setCenter(centroMapa)
 
-                    // ── PUNTO 5: PIN AZUL ESTILO GOOGLE MAPS REMOVIENDO EL MUÑECO ──
                     val markerGps = Marker(this).apply {
                         position = centroMapa
                         title = "Mi Ubicación Real"
@@ -87,7 +93,7 @@ fun VisorOsmdroid(
                         paint.color = android.graphics.Color.WHITE
                         canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
                         
-                        paint.color = android.graphics.Color.parseColor("#1A73E8") // Azul Google Maps
+                        paint.color = android.graphics.Color.parseColor("#1A73E8") 
                         canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * ctx.resources.displayMetrics.density), paint)
                         
                         icon = BitmapDrawable(ctx.resources, bitmap)
@@ -109,14 +115,12 @@ fun VisorOsmdroid(
             }
         )
 
-        // Retícula central de precisión
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val centroX = size.width / 2f
             val centroY = size.height / 2f
             drawCircle(Color.White, 4.dp.toPx(), Offset(centroX, centroY))
         }
 
-        // Selección de Capas Unificada
         Box(Modifier.align(Alignment.TopEnd).padding(14.dp)) {
             FloatingActionButton(onClick = { menuDesplegado = true }, modifier = Modifier.size(44.dp), containerColor = EstilosOsmdroid.Superficie, contentColor = EstilosOsmdroid.Accent, shape = CircleShape) { Icon(Icons.Default.Layers, null) }
             DropdownMenu(expanded = menuDesplegado, onDismissRequest = { menuDesplegado = false }, modifier = Modifier.background(EstilosOsmdroid.Superficie)) {
@@ -126,7 +130,12 @@ fun VisorOsmdroid(
             }
         }
 
-        // CORRECCIÓN PUNTO 6 (CERO CRASHES EN EL +): Captura directa del centro del mapa en memoria
+        Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FloatingActionButton(onClick = { mapViewRef?.controller?.animateTo(centroMapa, 17.0, 500L) }, modifier = Modifier.size(48.dp), containerColor = EstilosOsmdroid.Accent, contentColor = Color.Black, shape = CircleShape) {
+                Icon(Icons.Default.MyLocation, null)
+            }
+        }
+
         FloatingActionButton(
             onClick = { 
                 mapViewRef?.let { map ->
@@ -134,7 +143,7 @@ fun VisorOsmdroid(
                     onCapturarPunto(c.latitude, c.longitude, 2600.0)
                 }
             }, 
-            modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp), 
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 74.dp, bottom = 14.dp), 
             containerColor = EstilosOsmdroid.Superficie, contentColor = EstilosOsmdroid.Accent, shape = CircleShape
         ) { Icon(Icons.Default.Add, null, modifier = Modifier.size(28.dp)) }
 
@@ -143,3 +152,6 @@ fun VisorOsmdroid(
         }
     }
 }
+
+@Composable
+private fun modifierBotonOsm() = Modifier.size(40.dp)
